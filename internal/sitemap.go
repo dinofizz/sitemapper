@@ -32,8 +32,7 @@ func (sm *SiteMap) UpdateUrlWithLinks(u *url.URL, newLinks []*url.URL) {
 	sm.l.Lock()
 	defer sm.l.Unlock()
 	links := sm.sitemap[u.String()]
-	links = append(links, newLinks...)
-	sm.sitemap[u.String()] = links
+	sm.sitemap[u.String()] = append(links, newLinks...)
 }
 
 func (sm *SiteMap) Print() {

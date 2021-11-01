@@ -1,10 +1,9 @@
 package cmd
 
 import (
-	"fmt"
 	"github.com/spf13/cobra"
+	"log"
 	"net/url"
-	"os"
 	"sitemapper/internal"
 	"strings"
 )
@@ -22,16 +21,16 @@ func init() {
 var versionCmd = &cobra.Command{
 	Use:   "map",
 	Short: "Create a sitemap",
-	Run: func(cmd *cobra.Command, args []string) {
-		fmt.Printf("Crawling %s with depth %d\n", site, depth)
+	RunE: func(cmd *cobra.Command, args []string) error {
+		log.Printf("Crawling %s with depth %d", site, depth)
 		u, err := url.Parse(strings.ToLower(site))
 		if err != nil {
-			fmt.Printf("error parsing site URL %s\n", site)
-			os.Exit(1)
+			return err
 		}
 		sm := internal.NewSiteMap()
 		c := internal.NewCrawler(sm)
 		c.Visit(u, u, 0, depth)
 		sm.Print()
+		return nil
 	},
 }

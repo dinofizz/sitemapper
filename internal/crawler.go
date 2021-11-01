@@ -4,6 +4,7 @@ import (
 	"errors"
 	"fmt"
 	"io/ioutil"
+	"log"
 	"net/http"
 	"net/url"
 	"regexp"
@@ -24,13 +25,17 @@ func (c *Crawler) Visit(u *url.URL, parent *url.URL, d, max int) {
 	}
 
 	if c.sm.UrlExists(u) == true {
-		//fmt.Printf("Ignoring %s as we already have it\n", u.String())
-		return
+		log.Printf("ignoring %s as we already have it", u.String())
 	}
 
+
+	log.Printf("visiting URL %s", u.String())
 	c.sm.AddUrl(u)
 
-	html, _ := c.GetHtml(u)
+	html, err := c.GetHtml(u)
+	if err != nil {
+		log.Printf("error retrieving HTML for URL %s: %s", u.String(), err)
+	}
 	links := c.FindLinks(html)
 	urls := c.CleanLinks(links, parent)
 	if len(urls) > 0 {
@@ -42,12 +47,6 @@ func (c *Crawler) Visit(u *url.URL, parent *url.URL, d, max int) {
 	}
 }
 
-func (c *Crawler) PrintLinks(urls []*url.URL) {
-	for _, u := range urls {
-		fmt.Println(u.String())
-	}
-}
-
 func (c *Crawler) CleanLinks(links []string, u *url.URL) []*url.URL {
 	cleanLinks := make([]*url.URL, 0)
 
@@ -55,18 +54,23 @@ func (c *Crawler) CleanLinks(links []string, u *url.URL) []*url.URL {
 
 		l, err := url.Parse(link)
 		if err != nil {
-			fmt.Printf("error parsing link %s\n", link)
+			log.Printf("error parsing link %s", link)
 			continue
 		}
 
+		if l.Scheme != "" && l.Scheme != "http" && l.Scheme != "https"  {
+			log.Printf("ignorng scheme %s in link %s", l.Scheme, link)
+		}
+
 		if l.Host == "" && (l.Path == "" || l.Path == "/") {
+			log.Printf("Ignoring link %s", link)
 			continue
 		}
 
 		if l.Host == "" && strings.HasPrefix(l.Path, "/") {
 			urlLink, err := url.Parse(u.String() + l.String())
 			if err != nil {
-				fmt.Printf("error parsing link %s\n", link)
+				log.Printf("error parsing link %s", link)
 				continue
 			}
 			cleanLinks = append(cleanLinks, urlLink)
@@ -75,7 +79,7 @@ func (c *Crawler) CleanLinks(links []string, u *url.URL) []*url.URL {
 		if strings.Contains(l.Host, u.Host) {
 			urlLink, err := url.Parse(l.String())
 			if err != nil {
-				fmt.Printf("error parsing link %s\n", link)
+				log.Printf("error parsing link %s", link)
 				continue
 			}
 			cleanLinks = append(cleanLinks, urlLink)
