@@ -38,7 +38,10 @@ func (sm *SiteMap) UpdateUrlWithLinks(u *url.URL, newLinks []*url.URL) {
 func (sm *SiteMap) Print() {
 	sm.l.RLock()
 	defer sm.l.RUnlock()
+	var num int
 	for k, v := range sm.sitemap {
 		fmt.Println(k, len(v))
+		num += len(v)
 	}
+	fmt.Println(num)
 }

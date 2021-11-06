@@ -9,14 +9,17 @@ import (
 	"net/url"
 	"regexp"
 	"strings"
+	"sync"
 )
 
 type Crawler struct {
-	sm *SiteMap
+	sm   *SiteMap
+	WG   sync.WaitGroup
+	sync bool
 }
 
-func NewCrawler(sitemap *SiteMap) *Crawler {
-	return &Crawler{sm: sitemap}
+func NewCrawler(sitemap *SiteMap, synchronous bool) *Crawler {
+	return &Crawler{sm: sitemap, sync: synchronous}
 }
 
 func (c *Crawler) Visit(u *url.URL, parent *url.URL, d, max int) {
@@ -26,6 +29,7 @@ func (c *Crawler) Visit(u *url.URL, parent *url.URL, d, max int) {
 
 	if c.sm.UrlExists(u) == true {
 		log.Printf("ignoring %s as we already have it", u.String())
+		return
 	}
 
 	log.Printf("visiting URL %s", u.String())
@@ -42,7 +46,15 @@ func (c *Crawler) Visit(u *url.URL, parent *url.URL, d, max int) {
 	}
 	d++
 	for _, urlLink := range urls {
-		c.Visit(urlLink, parent, d, max)
+		if c.sync == true {
+			c.Visit(urlLink, parent, d, max)
+		} else {
+			c.WG.Add(1)
+			go func(urlLink, parent *url.URL, d, max int) {
+				defer c.WG.Done()
+				c.Visit(urlLink, parent, d, max)
+			}(urlLink, parent, d, max)
+		}
 	}
 }
 
