@@ -28,7 +28,6 @@ func (c *Crawler) Visit(u *url.URL, parent *url.URL, d, max int) {
 		log.Printf("ignoring %s as we already have it", u.String())
 	}
 
-
 	log.Printf("visiting URL %s", u.String())
 	c.sm.AddUrl(u)
 
@@ -58,7 +57,7 @@ func (c *Crawler) CleanLinks(links []string, u *url.URL) []*url.URL {
 			continue
 		}
 
-		if l.Scheme != "" && l.Scheme != "http" && l.Scheme != "https"  {
+		if l.Scheme != "" && l.Scheme != "http" && l.Scheme != "https" {
 			log.Printf("ignorng scheme %s in link %s", l.Scheme, link)
 		}
 
@@ -67,21 +66,25 @@ func (c *Crawler) CleanLinks(links []string, u *url.URL) []*url.URL {
 			continue
 		}
 
+		var urlLink *url.URL
+
 		if l.Host == "" && strings.HasPrefix(l.Path, "/") {
-			urlLink, err := url.Parse(u.String() + l.String())
+			urlLink, err = url.Parse(u.String() + l.String())
 			if err != nil {
 				log.Printf("error parsing link %s", link)
 				continue
 			}
-			cleanLinks = append(cleanLinks, urlLink)
 		}
 
 		if strings.Contains(l.Host, u.Host) {
-			urlLink, err := url.Parse(l.String())
+			urlLink, err = url.Parse(l.String())
 			if err != nil {
 				log.Printf("error parsing link %s", link)
 				continue
 			}
+		}
+
+		if urlLink != nil {
 			cleanLinks = append(cleanLinks, urlLink)
 		}
 	}
@@ -107,16 +110,24 @@ func (c *Crawler) GetHtml(u *url.URL) (string, error) {
 }
 
 func (c *Crawler) FindLinks(html string) []string {
-	re := regexp.MustCompile("<a\\s+(?:[^>]*?\\s+)?href=\"([^\"]*)\"")
+	re := regexp.MustCompile("<a\\s+(?:[^>]*?\\s+)?href=(\\S+?)[\\s>]")
 	matches := re.FindAllStringSubmatch(html, -1)
 	if matches == nil || len(matches) == 0 {
 		return nil
 	}
 
+	lm := make(map[string]struct{}, 0)
 	links := make([]string, 0)
 
 	for _, v := range matches {
-		links = append(links, strings.TrimSpace(v[1]))
+		m := v[1]
+		m = strings.Trim(m, "\"'")
+		m = strings.TrimSpace(m)
+		if _, ok := lm[m]; ok == false {
+			lm[m] = struct{}{}
+			links = append(links, m)
+		}
 	}
+
 	return links
 }
