@@ -5,25 +5,31 @@ import (
 	"fmt"
 	"io/ioutil"
 	"log"
+	"math/rand"
 	"net/http"
 	"net/url"
 	"regexp"
 	"strings"
 	"sync"
+	"time"
 )
 
 type Crawler struct {
-	sm   *SiteMap
-	WG   sync.WaitGroup
-	sync bool
+	sm    *SiteMap
+	WG    sync.WaitGroup
+	l     *Limiter
+	sync  bool
+	limit int
+	max   int
 }
 
-func NewCrawler(sitemap *SiteMap, synchronous bool) *Crawler {
-	return &Crawler{sm: sitemap, sync: synchronous}
+func NewCrawler(sitemap *SiteMap, max int, synchronous bool, limit int) *Crawler {
+	l := NewLimiter(limit)
+	return &Crawler{sm: sitemap, sync: synchronous, limit: limit, max: max, l: l}
 }
 
-func (c *Crawler) Visit(u *url.URL, parent *url.URL, d, max int) {
-	if d == max {
+func (c *Crawler) Visit(u *url.URL, parent *url.URL, d int) {
+	if c.max == d {
 		return
 	}
 
@@ -44,16 +50,39 @@ func (c *Crawler) Visit(u *url.URL, parent *url.URL, d, max int) {
 	if len(urls) > 0 {
 		c.sm.UpdateUrlWithLinks(u, urls)
 	}
+
 	d++
+	if c.max == d {
+		return
+	}
 	for _, urlLink := range urls {
 		if c.sync == true {
-			c.Visit(urlLink, parent, d, max)
+			c.Visit(urlLink, parent, d)
+		} else if c.limit == 0 {
+			c.WG.Add(1)
+			go func(urlLink, parent *url.URL, d int) {
+				defer c.WG.Done()
+				c.Visit(urlLink, parent, d)
+			}(urlLink, parent, d)
 		} else {
 			c.WG.Add(1)
-			go func(urlLink, parent *url.URL, d, max int) {
+			go func(urlLink, parent *url.URL, d int) {
 				defer c.WG.Done()
-				c.Visit(urlLink, parent, d, max)
-			}(urlLink, parent, d, max)
+				retries := 0
+				for {
+					err := c.l.RunFunc(func() {
+						c.Visit(urlLink, parent, d)
+					})
+					if err != nil {
+						n := rand.Intn(500) // n will be between 0 and 10
+						log.Printf("task limited for URL %s, sleeping for %d millisecconds\n", urlLink.String(), n)
+						time.Sleep(time.Duration(n) * time.Millisecond)
+						retries++
+					} else {
+						break
+					}
+				}
+			}(urlLink, parent, d)
 		}
 	}
 }
