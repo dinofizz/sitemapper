@@ -8,87 +8,163 @@ import (
 	"math/rand"
 	"net/http"
 	"net/url"
+	"path"
 	"regexp"
 	"strings"
 	"sync"
 	"time"
 )
 
-type Crawler struct {
+type Visitor interface {
+	Run()
+	Visit(u, root, parent *url.URL, d int)
+}
+
+type MapperClient struct {
+	V Visitor
+}
+
+type SynchronousVisitor struct {
 	sm    *SiteMap
-	WG    sync.WaitGroup
-	l     *Limiter
-	sync  bool
-	limit int
 	max   int
+	start *url.URL
 }
 
-func NewCrawler(sitemap *SiteMap, max int, synchronous bool, limit int) *Crawler {
-	l := NewLimiter(limit)
-	return &Crawler{sm: sitemap, sync: synchronous, limit: limit, max: max, l: l}
+type ConcurrentVisitor struct {
+	SynchronousVisitor
+	WG sync.WaitGroup
 }
 
-func (c *Crawler) Visit(u *url.URL, parent *url.URL, d int) {
-	if c.max == d {
+type ConcurrentLimitedVisitor struct {
+	ConcurrentVisitor
+	limiter *Limiter
+}
+
+func NewSynchronousVisitor(sitemap *SiteMap, max int, start *url.URL) *SynchronousVisitor {
+	return &SynchronousVisitor{sm: sitemap, max: max, start: start}
+}
+func NewConcurrentVisitor(sitemap *SiteMap, max int, start *url.URL) *ConcurrentVisitor {
+	return &ConcurrentVisitor{SynchronousVisitor: SynchronousVisitor{sm: sitemap, max: max, start: start}}
+}
+
+func NewConcurrentLimitedVisitor(sitemap *SiteMap, max int, start *url.URL, limiter *Limiter) *ConcurrentLimitedVisitor {
+	return &ConcurrentLimitedVisitor{
+		ConcurrentVisitor: ConcurrentVisitor{
+			SynchronousVisitor: SynchronousVisitor{
+				sm:    sitemap,
+				max:   max,
+				start: start,
+			},
+		},
+		limiter: limiter,
+	}
+}
+
+func (mc MapperClient) Run() {
+	mc.V.Run()
+}
+func (c *SynchronousVisitor) Run() {
+	c.Visit(c.start, c.start, c.start, 0)
+}
+
+func (c *ConcurrentVisitor) Run() {
+	c.Visit(c.start, c.start, c.start, 0)
+	c.WG.Wait()
+}
+func (c *ConcurrentLimitedVisitor) Run() {
+	c.Visit(c.start, c.start, c.start, 0)
+	c.WG.Wait()
+}
+
+func (c *SynchronousVisitor) Visit(u *url.URL, root *url.URL, parent *url.URL, d int) {
+	urls, done := getLinks(u, root, parent, d, c.max, c.sm)
+	if done {
 		return
 	}
+	d++
 
-	if c.sm.UrlExists(u) == true {
-		log.Printf("ignoring %s as we already have it", u.String())
+	for _, urlLink := range urls {
+		c.Visit(urlLink, root, u, d)
+	}
+}
+
+func (c *ConcurrentVisitor) Visit(u *url.URL, root *url.URL, parent *url.URL, d int) {
+	urls, done := getLinks(u, root, parent, d, c.max, c.sm)
+	if done {
 		return
 	}
+	d++
 
-	log.Printf("visiting URL %s", u.String())
-	c.sm.AddUrl(u)
+	for _, urlLink := range urls {
+		c.WG.Add(1)
+		go func(urlLink, root, parent *url.URL, d int) {
+			defer c.WG.Done()
+			c.Visit(urlLink, root, parent, d)
+		}(urlLink, root, u, d)
+	}
+}
 
-	html, err := c.GetHtml(u)
+func (c *ConcurrentLimitedVisitor) Visit(u *url.URL, root *url.URL, parent *url.URL, d int) {
+	urls, done := getLinks(u, root, parent, d, c.max, c.sm)
+	if done {
+		return
+	}
+	d++
+
+	for _, urlLink := range urls {
+		c.WG.Add(1)
+		go func(urlLink, root, parent *url.URL, d int) {
+			defer c.WG.Done()
+			retries := 0
+			for {
+				err := c.limiter.RunFunc(func() {
+					c.Visit(urlLink, root, parent, d)
+				})
+				if err != nil {
+					n := rand.Intn(500) // n will be between 0 and 10
+					log.Printf("task limited for URL %s, sleeping for %d millisecconds\n", urlLink.String(), n)
+					time.Sleep(time.Duration(n) * time.Millisecond)
+					retries++
+				} else {
+					break
+				}
+			}
+		}(urlLink, root, u, d)
+	}
+}
+
+func getLinks(u *url.URL, root *url.URL, parent *url.URL, d int, max int, sm *SiteMap) ([]*url.URL, bool) {
+	if max == d {
+		return nil, true
+	}
+
+	if urls, exists := sm.GetUrls(u); exists == true {
+		//log.Printf("ignoring %s as we already have it", u.String())
+		return urls, false
+	}
+
+	sm.AddUrl(u)
+	log.Printf("visiting URL %s at depth %d with parent %s", u.String(), d, parent.String())
+
+	html, err := getHtml(u)
 	if err != nil {
 		log.Printf("error retrieving HTML for URL %s: %s", u.String(), err)
 	}
-	links := c.FindLinks(html)
-	urls := c.CleanLinks(links, parent)
+	links := extractLinks(html)
+	urls := cleanLinks(links, root, u)
 	if len(urls) > 0 {
-		c.sm.UpdateUrlWithLinks(u, urls)
+		sm.UpdateUrlWithLinks(u, urls)
 	}
 
-	d++
-	if c.max == d {
-		return
-	}
-	for _, urlLink := range urls {
-		if c.sync == true {
-			c.Visit(urlLink, parent, d)
-		} else if c.limit == 0 {
-			c.WG.Add(1)
-			go func(urlLink, parent *url.URL, d int) {
-				defer c.WG.Done()
-				c.Visit(urlLink, parent, d)
-			}(urlLink, parent, d)
-		} else {
-			c.WG.Add(1)
-			go func(urlLink, parent *url.URL, d int) {
-				defer c.WG.Done()
-				retries := 0
-				for {
-					err := c.l.RunFunc(func() {
-						c.Visit(urlLink, parent, d)
-					})
-					if err != nil {
-						n := rand.Intn(500) // n will be between 0 and 10
-						log.Printf("task limited for URL %s, sleeping for %d millisecconds\n", urlLink.String(), n)
-						time.Sleep(time.Duration(n) * time.Millisecond)
-						retries++
-					} else {
-						break
-					}
-				}
-			}(urlLink, parent, d)
-		}
-	}
+	//d++
+	//if max == d {
+	//	return 0, nil, true
+	//}
+	return urls, false
 }
 
-func (c *Crawler) CleanLinks(links []string, u *url.URL) []*url.URL {
-	cleanLinks := make([]*url.URL, 0)
+func cleanLinks(links []string, root *url.URL, parent *url.URL) []*url.URL {
+	cLinks := make([]*url.URL, 0)
 
 	for _, link := range links {
 
@@ -110,30 +186,32 @@ func (c *Crawler) CleanLinks(links []string, u *url.URL) []*url.URL {
 		var urlLink *url.URL
 
 		if l.Host == "" && strings.HasPrefix(l.Path, "/") {
-			urlLink, err = url.Parse(u.String() + l.String())
+			urlLink, err = url.Parse(fmt.Sprintf("%s://%s%s", root.Scheme, root.Host, l.String()))
 			if err != nil {
 				log.Printf("error parsing link %s", link)
 				continue
 			}
-		}
-
-		if strings.Contains(l.Host, u.Host) {
-			urlLink, err = url.Parse(l.String())
+		} else if l.Host == "" && l.Path != "" {
+			newPath := path.Join(parent.Path, l.Path)
+			s := fmt.Sprintf("%s://%s/%s", parent.Scheme, parent.Host, newPath)
+			urlLink, err = url.Parse(s)
 			if err != nil {
 				log.Printf("error parsing link %s", link)
 				continue
 			}
+		} else if strings.Contains(l.Host, root.Host) {
+			urlLink = &url.URL{Host: l.Host, Path: l.Path, Scheme: l.Scheme}
 		}
 
 		if urlLink != nil {
-			cleanLinks = append(cleanLinks, urlLink)
+			cLinks = append(cLinks, urlLink)
 		}
 	}
 
-	return cleanLinks
+	return cLinks
 }
 
-func (c *Crawler) GetHtml(u *url.URL) (string, error) {
+func getHtml(u *url.URL) (string, error) {
 	resp, err := http.Get(u.String())
 	if err != nil {
 		return "", err
@@ -150,7 +228,7 @@ func (c *Crawler) GetHtml(u *url.URL) (string, error) {
 	return string(b), nil
 }
 
-func (c *Crawler) FindLinks(html string) []string {
+func extractLinks(html string) []string {
 	re := regexp.MustCompile("<a\\s+(?:[^>]*?\\s+)?href=(\\S+?)[\\s>]")
 	matches := re.FindAllStringSubmatch(html, -1)
 	if matches == nil || len(matches) == 0 {

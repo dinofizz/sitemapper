@@ -29,45 +29,38 @@ var versionCmd = &cobra.Command{
 	Use:   "map",
 	Short: "Create a sitemap",
 	RunE: func(cmd *cobra.Command, args []string) error {
-		sync := true
+		startUrl, err := url.Parse(strings.ToLower(site))
+		if err != nil {
+			return err
+		}
+		sm := internal.NewSiteMap()
+		var v internal.Visitor
+		v = internal.NewConcurrentVisitor(sm, depth, startUrl)
 		if mode != "" {
 			switch mode {
 			case "synchronous":
-				sync = true
-				limit = 0
+				v = internal.NewSynchronousVisitor(sm, depth, startUrl)
 			case "concurrent":
-				sync = false
-				limit = 0
+				v = internal.NewConcurrentVisitor(sm, depth, startUrl)
 			case "limited":
 				if limit <= 0 {
 					return errors.New("invalid limit")
 				}
-				sync = false
+				l := internal.NewLimiter(limit)
+				v = internal.NewConcurrentLimitedVisitor(sm, depth, startUrl, l)
 			default:
 				return errors.New("unsupported mode")
 			}
 		}
 
-		start := time.Now()
+		mc := &internal.MapperClient{V: v}
 		log.Printf("Crawling %s with depth %d", site, depth)
-		u, err := url.Parse(strings.ToLower(site))
-		if err != nil {
-			return err
-		}
-		sm := internal.NewSiteMap()
-		c := internal.NewCrawler(sm, depth, sync, limit)
-		c.Visit(u, u, 0)
-
-		if mode == "concurrent" || mode == "limited" {
-			c.WG.Wait()
-		}
-
-
-
+		start := time.Now()
+		mc.Run()
 		end := time.Now()
 		elapsed := end.Sub(start)
 		sm.Print()
-		fmt.Println(elapsed.Milliseconds())
+		fmt.Println("Elapsed milliseconds: ", elapsed.Milliseconds())
 		return nil
 	},
 }

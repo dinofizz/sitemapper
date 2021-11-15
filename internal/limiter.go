@@ -6,6 +6,7 @@ import (
 
 type Limiter struct {
 	ch chan struct{}
+	limit int
 }
 
 func NewLimiter(limit int) *Limiter {
@@ -17,6 +18,7 @@ func NewLimiter(limit int) *Limiter {
 
 	return &Limiter{
 		ch: ch,
+		limit: limit,
 	}
 }
 
