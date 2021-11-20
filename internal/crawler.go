@@ -17,7 +17,7 @@ import (
 
 type CrawlEngine interface {
 	Run()
-	crawl(u, root, parent *url.URL, depth int)
+	crawl(u, root, parent string, depth int)
 }
 
 type Crawler struct {
@@ -27,7 +27,7 @@ type Crawler struct {
 type SynchronousCrawlEngine struct {
 	sm       *SiteMap
 	maxDepth int
-	start    *url.URL
+	start    string
 }
 
 type ConcurrentCrawlEngine struct {
@@ -40,14 +40,14 @@ type ConcurrentLimitedCrawlEngine struct {
 	limiter *Limiter
 }
 
-func NewSynchronousCrawlEngine(sitemap *SiteMap, maxDepth int, start *url.URL) *SynchronousCrawlEngine {
+func NewSynchronousCrawlEngine(sitemap *SiteMap, maxDepth int, start string) *SynchronousCrawlEngine {
 	return &SynchronousCrawlEngine{sm: sitemap, maxDepth: maxDepth, start: start}
 }
-func NewConcurrentCrawlEngine(sitemap *SiteMap, maxDepth int, start *url.URL) *ConcurrentCrawlEngine {
+func NewConcurrentCrawlEngine(sitemap *SiteMap, maxDepth int, start string) *ConcurrentCrawlEngine {
 	return &ConcurrentCrawlEngine{SynchronousCrawlEngine: SynchronousCrawlEngine{sm: sitemap, maxDepth: maxDepth, start: start}}
 }
 
-func NewConcurrentLimitedCrawlEngine(sitemap *SiteMap, maxDepth int, start *url.URL, limiter *Limiter) *ConcurrentLimitedCrawlEngine {
+func NewConcurrentLimitedCrawlEngine(sitemap *SiteMap, maxDepth int, start string, limiter *Limiter) *ConcurrentLimitedCrawlEngine {
 	return &ConcurrentLimitedCrawlEngine{
 		ConcurrentCrawlEngine: ConcurrentCrawlEngine{
 			SynchronousCrawlEngine: SynchronousCrawlEngine{
@@ -76,7 +76,7 @@ func (c *ConcurrentLimitedCrawlEngine) Run() {
 	c.WG.Wait()
 }
 
-func (c *SynchronousCrawlEngine) crawl(u, root, parent *url.URL, depth int) {
+func (c *SynchronousCrawlEngine) crawl(u, root, parent string, depth int) {
 	if c.maxDepth == depth {
 		return
 	}
@@ -88,7 +88,7 @@ func (c *SynchronousCrawlEngine) crawl(u, root, parent *url.URL, depth int) {
 	}
 }
 
-func (c *ConcurrentCrawlEngine) crawl(u, root, parent *url.URL, depth int) {
+func (c *ConcurrentCrawlEngine) crawl(u, root, parent string, depth int) {
 	if c.maxDepth == depth {
 		return
 	}
@@ -97,14 +97,14 @@ func (c *ConcurrentCrawlEngine) crawl(u, root, parent *url.URL, depth int) {
 
 	for _, urlLink := range urls {
 		c.WG.Add(1)
-		go func(urlLink, root, parent *url.URL, d int) {
+		go func(urlLink, root, parent string, d int) {
 			defer c.WG.Done()
 			c.crawl(urlLink, root, parent, d)
 		}(urlLink, root, u, depth)
 	}
 }
 
-func (c *ConcurrentLimitedCrawlEngine) crawl(u, root, parent *url.URL, depth int) {
+func (c *ConcurrentLimitedCrawlEngine) crawl(u, root, parent string, depth int) {
 	if c.maxDepth == depth {
 		return
 	}
@@ -113,7 +113,7 @@ func (c *ConcurrentLimitedCrawlEngine) crawl(u, root, parent *url.URL, depth int
 
 	for _, urlLink := range urls {
 		c.WG.Add(1)
-		go func(urlLink, root, parent *url.URL, d int) {
+		go func(urlLink, root, parent string, d int) {
 			defer c.WG.Done()
 			retries := 0
 			for {
@@ -122,7 +122,7 @@ func (c *ConcurrentLimitedCrawlEngine) crawl(u, root, parent *url.URL, depth int
 				})
 				if err != nil {
 					n := rand.Intn(500) // n will be between 0 and 10
-					log.Printf("task limited for URL %s, sleeping for %depth millisecconds\n", urlLink.String(), n)
+					log.Printf("task limited for URL %s, sleeping for %depth millisecconds\n", urlLink, n)
 					time.Sleep(time.Duration(n) * time.Millisecond)
 					retries++
 				} else {
@@ -133,17 +133,17 @@ func (c *ConcurrentLimitedCrawlEngine) crawl(u, root, parent *url.URL, depth int
 	}
 }
 
-func getLinks(url, root, parent *url.URL, depth int, sm *SiteMap) []*url.URL {
-	if urls, exists := sm.GetUrls(url); exists {
+func getLinks(url, root, parent string, depth int, sm *SiteMap) []string {
+	if urls, exists := sm.GetLinks(url); exists {
 		return urls
 	}
 
 	sm.AddUrl(url)
-	log.Printf("visiting URL %s at depth %d with parent %s", url.String(), depth, parent.String())
+	log.Printf("visiting URL %s at depth %d with parent %s", url, depth, parent)
 
 	html, err := getHtml(url)
 	if err != nil {
-		log.Printf("error retrieving HTML for URL %s: %s", url.String(), err)
+		log.Printf("error retrieving HTML for URL %s: %s", url, err)
 	}
 	links := extractLinks(html)
 	urls := cleanLinks(links, root, url)
@@ -154,8 +154,9 @@ func getLinks(url, root, parent *url.URL, depth int, sm *SiteMap) []*url.URL {
 	return urls
 }
 
-func cleanLinks(links []string, root *url.URL, parent *url.URL) []*url.URL {
-	var cLinks []*url.URL
+func cleanLinks(links []string, root, parent string) []string {
+	var cLinks []string
+
 
 	for _, link := range links {
 
@@ -176,26 +177,36 @@ func cleanLinks(links []string, root *url.URL, parent *url.URL) []*url.URL {
 		}
 
 		var urlLink *url.URL
+		rootUrl, err := url.Parse(root)
+		if err != nil {
+			log.Printf("error parsing root URL %s", root)
+			continue
+		}
+		parentUrl, err := url.Parse(parent)
+		if err != nil {
+			log.Printf("error parsing parent URL %s", parent)
+			continue
+		}
 
 		if l.Host == "" && strings.HasPrefix(l.Path, "/") {
-			urlLink = &url.URL{Host: root.Host, Path: l.Path, Scheme: root.Scheme}
+			urlLink = &url.URL{Host: rootUrl.Host, Path: l.Path, Scheme: rootUrl.Scheme}
 		} else if l.Host == "" && l.Path != "" {
-			newPath := path.Join(parent.Path, l.Path)
-			urlLink = &url.URL{Host: parent.Host, Path: newPath, Scheme: parent.Scheme}
-		} else if strings.Contains(l.Host, root.Host) {
+			newPath := path.Join(parentUrl.Path, l.Path)
+			urlLink = &url.URL{Host: parentUrl.Host, Path: newPath, Scheme: parentUrl.Scheme}
+		} else if strings.Contains(l.Host, rootUrl.Host) {
 			urlLink = &url.URL{Host: l.Host, Path: l.Path, Scheme: l.Scheme}
 		}
 
 		if urlLink != nil {
-			cLinks = append(cLinks, urlLink)
+			cLinks = append(cLinks, urlLink.String())
 		}
 	}
 
 	return cLinks
 }
 
-func getHtml(u *url.URL) (string, error) {
-	resp, err := http.Get(u.String())
+func getHtml(u string) (string, error) {
+	resp, err := http.Get(u)
 	if err != nil {
 		return "", err
 	}

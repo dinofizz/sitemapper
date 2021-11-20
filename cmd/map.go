@@ -4,7 +4,6 @@ import (
 	"errors"
 	"github.com/spf13/cobra"
 	"log"
-	"net/url"
 	"sitemapper/internal"
 	"strings"
 	"time"
@@ -31,10 +30,7 @@ var versionCmd = &cobra.Command{
 	Use:   "map",
 	Short: "Create a sitemap",
 	RunE: func(cmd *cobra.Command, args []string) error {
-		startUrl, err := url.Parse(strings.ToLower(site))
-		if err != nil {
-			return err
-		}
+		startUrl := strings.ToLower(site)
 		sm := internal.NewSiteMap()
 		var c internal.CrawlEngine
 		c = internal.NewConcurrentCrawlEngine(sm, depth, startUrl)
@@ -55,10 +51,10 @@ var versionCmd = &cobra.Command{
 			}
 		}
 
-		mc := &internal.Crawler{C: c}
+		crawler := &internal.Crawler{C: c}
 		log.Printf("Crawling %s with depth %d", site, depth)
 		start := time.Now()
-		mc.Run()
+		crawler.Run()
 		end := time.Now()
 		elapsed := end.Sub(start)
 		sm.Print()

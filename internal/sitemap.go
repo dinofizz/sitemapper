@@ -2,7 +2,6 @@ package internal
 
 import (
 	"fmt"
-	"net/url"
 	"sort"
 	"strings"
 	"sync"
@@ -10,23 +9,23 @@ import (
 
 type SiteMap struct {
 	mutex   sync.RWMutex
-	sitemap map[string]map[string]*url.URL
+	sitemap map[string]map[string]string
 }
 
 func NewSiteMap() *SiteMap {
-	return &SiteMap{sitemap: map[string]map[string]*url.URL{}}
+	return &SiteMap{sitemap: map[string]map[string]string{}}
 }
 
-func (sm *SiteMap) GetUrls(u *url.URL) ([]*url.URL, bool) {
-	s := strings.TrimSuffix(u.String(), "/")
+func (sm *SiteMap) GetLinks(u string) ([]string, bool) {
+	s := strings.TrimSuffix(u, "/")
 	sm.mutex.RLock()
 	defer sm.mutex.RUnlock()
 	urlMap, exists := sm.sitemap[s]
-	if exists  {
+	if !exists {
 		return nil, false
 	}
 
-	var urls []*url.URL
+	var urls []string
 
 	for _, v := range urlMap {
 		urls = append(urls, v)
@@ -35,21 +34,21 @@ func (sm *SiteMap) GetUrls(u *url.URL) ([]*url.URL, bool) {
 	return urls, exists
 }
 
-func (sm *SiteMap) AddUrl(u *url.URL) {
-	s := strings.TrimSuffix(u.String(), "/")
+func (sm *SiteMap) AddUrl(u string) {
+	s := strings.TrimSuffix(u, "/")
 	sm.mutex.Lock()
 	defer sm.mutex.Unlock()
-	sm.sitemap[s] = map[string]*url.URL{}
+	sm.sitemap[s] = map[string]string{}
 }
 
-func (sm *SiteMap) UpdateUrlWithLinks(u *url.URL, newLinks []*url.URL) {
-	s := strings.TrimSuffix(u.String(), "/")
+func (sm *SiteMap) UpdateUrlWithLinks(u string, newLinks []string) {
+	s := strings.TrimSuffix(u, "/")
 	sm.mutex.Lock()
 	defer sm.mutex.Unlock()
 	linkMap := sm.sitemap[s]
 
 	for _, nl := range newLinks{
-		s := strings.TrimSuffix(nl.String(), "/")
+		s := strings.TrimSuffix(nl, "/")
 		linkMap[s] = nl
 	}
 
