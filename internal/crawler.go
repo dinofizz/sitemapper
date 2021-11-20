@@ -138,7 +138,7 @@ func getLinks(url, root, parent *url.URL, depth, maxDepth int, sm *SiteMap) ([]*
 		return nil, true
 	}
 
-	if urls, exists := sm.GetUrls(url); exists == true {
+	if urls, exists := sm.GetUrls(url); exists {
 		//log.Printf("ignoring %s as we already have it", url.String())
 		return urls, false
 	}
@@ -225,20 +225,20 @@ func getHtml(u *url.URL) (string, error) {
 }
 
 func extractLinks(html string) []string {
-	re := regexp.MustCompile("<a\\s+(?:[^>]*?\\s+)?href=(\\S+?)[\\s>]")
+	re := regexp.MustCompile(`<a\s+(?:[^>]*?\s+)?href=(\S+?)[\s>]`)
 	matches := re.FindAllStringSubmatch(html, -1)
-	if matches == nil || len(matches) == 0 {
+	if len(matches) == 0 {
 		return nil
 	}
 
-	lm := make(map[string]struct{}, 0)
+	lm := make(map[string]struct{})
 	links := make([]string, 0)
 
 	for _, v := range matches {
 		m := v[1]
 		m = strings.Trim(m, "\"'")
 		m = strings.TrimSpace(m)
-		if _, ok := lm[m]; ok == false {
+		if _, ok := lm[m]; !ok  {
 			lm[m] = struct{}{}
 			links = append(links, m)
 		}

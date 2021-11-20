@@ -22,7 +22,10 @@ func init() {
 	versionCmd.Flags().StringVarP(&site, "site", "s", "", "Site to crawl, including http scheme")
 	versionCmd.Flags().StringVarP(&mode, "mode", "m", "concurrent", "Specify mode: synchronous, concurrent, limited")
 	versionCmd.Flags().IntVarP(&limit, "limit", "l", 10, "Specify mode: synchronous, concurrent, limited")
-	versionCmd.MarkFlagRequired("site")
+	err := versionCmd.MarkFlagRequired("site")
+	if err != nil {
+		log.Fatalf(err.Error())
+	}
 }
 
 var versionCmd = &cobra.Command{

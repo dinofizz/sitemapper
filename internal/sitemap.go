@@ -22,7 +22,7 @@ func (sm *SiteMap) GetUrls(u *url.URL) ([]*url.URL, bool) {
 	sm.mutex.RLock()
 	defer sm.mutex.RUnlock()
 	urlMap, exists := sm.sitemap[s]
-	if exists == false {
+	if exists  {
 		return nil, false
 	}
 
@@ -62,7 +62,7 @@ func (sm *SiteMap) Print() {
 
 	var keys []string
 
-	for k, _ := range sm.sitemap {
+	for k := range sm.sitemap {
 		keys = append(keys, k)
 	}
 
@@ -73,7 +73,7 @@ func (sm *SiteMap) Print() {
 		linkMap := sm.sitemap[k]
 		var links []string
 
-		for kk, _ := range linkMap {
+		for kk := range linkMap {
 			links = append(links, kk)
 		}
 
