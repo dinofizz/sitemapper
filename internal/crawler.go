@@ -139,7 +139,6 @@ func getLinks(url, root, parent *url.URL, depth, maxDepth int, sm *SiteMap) ([]*
 	}
 
 	if urls, exists := sm.GetUrls(url); exists {
-		//log.Printf("ignoring %s as we already have it", url.String())
 		return urls, false
 	}
 
@@ -160,7 +159,7 @@ func getLinks(url, root, parent *url.URL, depth, maxDepth int, sm *SiteMap) ([]*
 }
 
 func cleanLinks(links []string, root *url.URL, parent *url.URL) []*url.URL {
-	cLinks := make([]*url.URL, 0)
+	var cLinks []*url.URL
 
 	for _, link := range links {
 
