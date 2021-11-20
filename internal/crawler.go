@@ -17,11 +17,11 @@ import (
 
 type CrawlEngine interface {
 	Run()
-	Crawl(u, root, parent *url.URL, d int)
+	crawl(u, root, parent *url.URL, depth int)
 }
 
 type Crawler struct {
-	V CrawlEngine
+	C CrawlEngine
 }
 
 type SynchronousCrawlEngine struct {
@@ -61,54 +61,54 @@ func NewConcurrentLimitedCrawlEngine(sitemap *SiteMap, maxDepth int, start *url.
 }
 
 func (mc Crawler) Run() {
-	mc.V.Run()
+	mc.C.Run()
 }
 func (c *SynchronousCrawlEngine) Run() {
-	c.Crawl(c.start, c.start, c.start, 0)
+	c.crawl(c.start, c.start, c.start, 0)
 }
 
 func (c *ConcurrentCrawlEngine) Run() {
-	c.Crawl(c.start, c.start, c.start, 0)
+	c.crawl(c.start, c.start, c.start, 0)
 	c.WG.Wait()
 }
 func (c *ConcurrentLimitedCrawlEngine) Run() {
-	c.Crawl(c.start, c.start, c.start, 0)
+	c.crawl(c.start, c.start, c.start, 0)
 	c.WG.Wait()
 }
 
-func (c *SynchronousCrawlEngine) Crawl(u, root, parent *url.URL, depth int) {
-	urls, done := getLinks(u, root, parent, depth, c.maxDepth, c.sm)
-	if done {
+func (c *SynchronousCrawlEngine) crawl(u, root, parent *url.URL, depth int) {
+	if c.maxDepth == depth {
 		return
 	}
+	urls := getLinks(u, root, parent, depth, c.sm)
 	depth++
 
 	for _, urlLink := range urls {
-		c.Crawl(urlLink, root, u, depth)
+		c.crawl(urlLink, root, u, depth)
 	}
 }
 
-func (c *ConcurrentCrawlEngine) Crawl(u, root, parent *url.URL, depth int) {
-	urls, done := getLinks(u, root, parent, depth, c.maxDepth, c.sm)
-	if done {
+func (c *ConcurrentCrawlEngine) crawl(u, root, parent *url.URL, depth int) {
+	if c.maxDepth == depth {
 		return
 	}
+	urls := getLinks(u, root, parent, depth, c.sm)
 	depth++
 
 	for _, urlLink := range urls {
 		c.WG.Add(1)
 		go func(urlLink, root, parent *url.URL, d int) {
 			defer c.WG.Done()
-			c.Crawl(urlLink, root, parent, d)
+			c.crawl(urlLink, root, parent, d)
 		}(urlLink, root, u, depth)
 	}
 }
 
-func (c *ConcurrentLimitedCrawlEngine) Crawl(u, root, parent *url.URL, depth int) {
-	urls, done := getLinks(u, root, parent, depth, c.maxDepth, c.sm)
-	if done {
+func (c *ConcurrentLimitedCrawlEngine) crawl(u, root, parent *url.URL, depth int) {
+	if c.maxDepth == depth {
 		return
 	}
+	urls := getLinks(u, root, parent, depth, c.sm)
 	depth++
 
 	for _, urlLink := range urls {
@@ -118,7 +118,7 @@ func (c *ConcurrentLimitedCrawlEngine) Crawl(u, root, parent *url.URL, depth int
 			retries := 0
 			for {
 				err := c.limiter.RunFunc(func() {
-					c.Crawl(urlLink, root, parent, d)
+					c.crawl(urlLink, root, parent, d)
 				})
 				if err != nil {
 					n := rand.Intn(500) // n will be between 0 and 10
@@ -133,17 +133,13 @@ func (c *ConcurrentLimitedCrawlEngine) Crawl(u, root, parent *url.URL, depth int
 	}
 }
 
-func getLinks(url, root, parent *url.URL, depth, maxDepth int, sm *SiteMap) ([]*url.URL, bool) {
-	if maxDepth == depth {
-		return nil, true
-	}
-
+func getLinks(url, root, parent *url.URL, depth int, sm *SiteMap) []*url.URL {
 	if urls, exists := sm.GetUrls(url); exists {
-		return urls, false
+		return urls
 	}
 
 	sm.AddUrl(url)
-	log.Printf("visiting URL %s at depth %depth with parent %s", url.String(), depth, parent.String())
+	log.Printf("visiting URL %s at depth %d with parent %s", url.String(), depth, parent.String())
 
 	html, err := getHtml(url)
 	if err != nil {
@@ -155,7 +151,7 @@ func getLinks(url, root, parent *url.URL, depth, maxDepth int, sm *SiteMap) ([]*
 		sm.UpdateUrlWithLinks(url, urls)
 	}
 
-	return urls, false
+	return urls
 }
 
 func cleanLinks(links []string, root *url.URL, parent *url.URL) []*url.URL {
@@ -170,30 +166,22 @@ func cleanLinks(links []string, root *url.URL, parent *url.URL) []*url.URL {
 		}
 
 		if l.Scheme != "" && l.Scheme != "http" && l.Scheme != "https" {
-			log.Printf("ignorng scheme %s in link %s", l.Scheme, link)
+			log.Printf("ignoring scheme %s in link %s", l.Scheme, link)
+			continue
 		}
 
 		if l.Host == "" && (l.Path == "" || l.Path == "/") {
-			log.Printf("Ignoring link %s", link)
+			log.Printf("ignoring link %s", link)
 			continue
 		}
 
 		var urlLink *url.URL
 
 		if l.Host == "" && strings.HasPrefix(l.Path, "/") {
-			urlLink, err = url.Parse(fmt.Sprintf("%s://%s%s", root.Scheme, root.Host, l.String()))
-			if err != nil {
-				log.Printf("error parsing link %s", link)
-				continue
-			}
+			urlLink = &url.URL{Host: root.Host, Path: l.Path, Scheme: root.Scheme}
 		} else if l.Host == "" && l.Path != "" {
 			newPath := path.Join(parent.Path, l.Path)
-			s := fmt.Sprintf("%s://%s/%s", parent.Scheme, parent.Host, newPath)
-			urlLink, err = url.Parse(s)
-			if err != nil {
-				log.Printf("error parsing link %s", link)
-				continue
-			}
+			urlLink = &url.URL{Host: parent.Host, Path: newPath, Scheme: parent.Scheme}
 		} else if strings.Contains(l.Host, root.Host) {
 			urlLink = &url.URL{Host: l.Host, Path: l.Path, Scheme: l.Scheme}
 		}
@@ -237,7 +225,7 @@ func extractLinks(html string) []string {
 		m := v[1]
 		m = strings.Trim(m, "\"'")
 		m = strings.TrimSpace(m)
-		if _, ok := lm[m]; !ok  {
+		if _, ok := lm[m]; !ok {
 			lm[m] = struct{}{}
 			links = append(links, m)
 		}

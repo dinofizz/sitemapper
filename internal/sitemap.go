@@ -84,5 +84,5 @@ func (sm *SiteMap) Print() {
 		fmt.Println("")
 	}
 
-	fmt.Println("Unique links: ", len(sm.sitemap))
+	fmt.Println("Number of crawled links: ", len(sm.sitemap))
 }

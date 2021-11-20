@@ -20,7 +20,7 @@ func init() {
 	versionCmd.Flags().IntVarP(&depth, "depth", "d", 1, "Specify crawl depth")
 	versionCmd.Flags().StringVarP(&site, "site", "s", "", "Site to crawl, including http scheme")
 	versionCmd.Flags().StringVarP(&mode, "mode", "m", "concurrent", "Specify mode: synchronous, concurrent, limited")
-	versionCmd.Flags().IntVarP(&limit, "limit", "l", 10, "Specify mode: synchronous, concurrent, limited")
+	versionCmd.Flags().IntVarP(&limit, "limit", "l", 10, "Specify max concurrent crawl tasks for limited mode")
 	err := versionCmd.MarkFlagRequired("site")
 	if err != nil {
 		log.Fatalf(err.Error())
@@ -36,26 +36,26 @@ var versionCmd = &cobra.Command{
 			return err
 		}
 		sm := internal.NewSiteMap()
-		var v internal.CrawlEngine
-		v = internal.NewConcurrentCrawlEngine(sm, depth, startUrl)
+		var c internal.CrawlEngine
+		c = internal.NewConcurrentCrawlEngine(sm, depth, startUrl)
 		if mode != "" {
 			switch mode {
 			case "synchronous":
-				v = internal.NewSynchronousCrawlEngine(sm, depth, startUrl)
+				c = internal.NewSynchronousCrawlEngine(sm, depth, startUrl)
 			case "concurrent":
-				v = internal.NewConcurrentCrawlEngine(sm, depth, startUrl)
+				c = internal.NewConcurrentCrawlEngine(sm, depth, startUrl)
 			case "limited":
 				if limit <= 0 {
 					return errors.New("invalid limit")
 				}
 				l := internal.NewLimiter(limit)
-				v = internal.NewConcurrentLimitedCrawlEngine(sm, depth, startUrl, l)
+				c = internal.NewConcurrentLimitedCrawlEngine(sm, depth, startUrl, l)
 			default:
 				return errors.New("unsupported mode")
 			}
 		}
 
-		mc := &internal.Crawler{V: v}
+		mc := &internal.Crawler{C: c}
 		log.Printf("Crawling %s with depth %d", site, depth)
 		start := time.Now()
 		mc.Run()
