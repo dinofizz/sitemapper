@@ -2,7 +2,6 @@ package cmd
 
 import (
 	"errors"
-	"fmt"
 	"github.com/spf13/cobra"
 	"log"
 	"net/url"
@@ -63,7 +62,7 @@ var versionCmd = &cobra.Command{
 		end := time.Now()
 		elapsed := end.Sub(start)
 		sm.Print()
-		fmt.Println("Elapsed milliseconds: ", elapsed.Milliseconds())
+		log.Println("Elapsed milliseconds: ", elapsed.Milliseconds())
 		return nil
 	},
 }
