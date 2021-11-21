@@ -1,7 +1,9 @@
 package internal
 
 import (
+	"encoding/json"
 	"fmt"
+	"log"
 	"sort"
 	"strings"
 	"sync"
@@ -55,33 +57,29 @@ func (sm *SiteMap) UpdateUrlWithLinks(u string, newLinks []string) {
 	sm.sitemap[s] = linkMap
 }
 
-func (sm *SiteMap) Print() {
+func (sm *SiteMap) Dump() {
 	sm.mutex.RLock()
 	defer sm.mutex.RUnlock()
 
-	var keys []string
+	tempMap := map[string][]string{}
 
 	for k := range sm.sitemap {
-		keys = append(keys, k)
-	}
-
-	sort.Strings(keys)
-	for uniqueIndex, k := range keys {
-		fmt.Printf("%d ### %s : %d\n", uniqueIndex+1, k, len(sm.sitemap[k]))
 
 		linkMap := sm.sitemap[k]
-		var links []string
-
+		links := make([]string, 0)
 		for kk := range linkMap {
 			links = append(links, kk)
 		}
 
 		sort.Strings(links)
-		for linkIndex, l := range links {
-			fmt.Println(linkIndex+1, l)
-		}
-		fmt.Println("")
+		tempMap[k] = links
 	}
 
-	fmt.Println("Number of crawled links: ", len(sm.sitemap))
+	j, err := json.Marshal(tempMap)
+	if err != nil {
+		fmt.Printf("Error: %s", err.Error())
+	} else {
+		fmt.Println(string(j))
+	}
+	log.Println("Number of crawled links: ", len(sm.sitemap))
 }

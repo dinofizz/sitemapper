@@ -57,8 +57,8 @@ var versionCmd = &cobra.Command{
 		crawler.Run()
 		end := time.Now()
 		elapsed := end.Sub(start)
-		sm.Print()
 		log.Println("Elapsed milliseconds: ", elapsed.Milliseconds())
+		sm.Dump()
 		return nil
 	},
 }
