@@ -144,8 +144,16 @@ func getLinks(url, root, parent string, depth int, sm *SiteMap) []string {
 	html, requestUrl, err := getHtml(url)
 	if err != nil {
 		log.Printf("error retrieving HTML for URL %s: %s", url, err)
+		return nil
+	}
+	if html == "" {
+		return nil
 	}
 	links := extractLinks(html)
+	if links == nil {
+		return nil
+	}
+
 	urls := cleanLinks(links, root, requestUrl)
 	if len(urls) > 0 {
 		sm.UpdateUrlWithLinks(url, urls)
@@ -183,7 +191,7 @@ func cleanLinks(links []string, root string, parentUrl *url.URL) []string {
 		}
 
 		if l.Host == "" && strings.HasPrefix(l.Path, "/") {
-			urlLink = &url.URL{Host: rootUrl.Host, Path: l.Path, Scheme: rootUrl.Scheme}
+			urlLink = &url.URL{Host: parentUrl.Host, Path: l.Path, Scheme: rootUrl.Scheme}
 		} else if l.Host == "" && l.Path != "" && strings.HasSuffix(parentUrl.Path, "/") {
 			newPath := path.Join(parentUrl.Path, l.Path)
 			urlLink = &url.URL{Host: parentUrl.Host, Path: newPath, Scheme: parentUrl.Scheme}

@@ -2,20 +2,22 @@ package internal
 
 import (
 	"encoding/json"
-	"fmt"
-	"log"
+	"io"
 	"sort"
 	"strings"
 	"sync"
 )
 
+type LinkMap map[string]string
+
+
 type SiteMap struct {
 	mutex   sync.RWMutex
-	sitemap map[string]map[string]string
+	sitemap map[string]LinkMap
 }
 
 func NewSiteMap() *SiteMap {
-	return &SiteMap{sitemap: map[string]map[string]string{}}
+	return &SiteMap{sitemap: map[string]LinkMap{}}
 }
 
 func (sm *SiteMap) GetLinks(u string) ([]string, bool) {
@@ -49,7 +51,7 @@ func (sm *SiteMap) UpdateUrlWithLinks(u string, newLinks []string) {
 	defer sm.mutex.Unlock()
 	linkMap := sm.sitemap[s]
 
-	for _, nl := range newLinks{
+	for _, nl := range newLinks {
 		s := strings.TrimSuffix(nl, "/")
 		linkMap[s] = nl
 	}
@@ -57,7 +59,22 @@ func (sm *SiteMap) UpdateUrlWithLinks(u string, newLinks []string) {
 	sm.sitemap[s] = linkMap
 }
 
-func (sm *SiteMap) Dump() {
+func (lm LinkMap) MarshalJSON() ([]byte, error) {
+	links := make([]string, 0)
+	for _, v := range lm {
+		links = append(links, v)
+	}
+
+	sort.Strings(links)
+	j, err := json.Marshal(links)
+	if err != nil {
+		return j, err
+	}
+
+	return j, nil
+}
+
+func (sm *SiteMap) Read(b []byte) (int, error) {
 	sm.mutex.RLock()
 	defer sm.mutex.RUnlock()
 
@@ -67,8 +84,8 @@ func (sm *SiteMap) Dump() {
 
 		linkMap := sm.sitemap[k]
 		links := make([]string, 0)
-		for kk := range linkMap {
-			links = append(links, kk)
+		for _, v := range linkMap {
+			links = append(links, v)
 		}
 
 		sort.Strings(links)
@@ -77,9 +94,9 @@ func (sm *SiteMap) Dump() {
 
 	j, err := json.Marshal(tempMap)
 	if err != nil {
-		fmt.Printf("Error: %s", err.Error())
+		return 0, err
 	} else {
-		fmt.Println(string(j))
+		n := copy(b, j)
+		return n, io.EOF
 	}
-	log.Println("Number of crawled links: ", len(sm.sitemap))
 }
