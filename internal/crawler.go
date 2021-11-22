@@ -141,12 +141,12 @@ func getLinks(url, root, parent string, depth int, sm *SiteMap) []string {
 	sm.AddUrl(url)
 	log.Printf("visiting URL %s at depth %d with parent %s", url, depth, parent)
 
-	html, err := getHtml(url)
+	html, requestUrl, err := getHtml(url)
 	if err != nil {
 		log.Printf("error retrieving HTML for URL %s: %s", url, err)
 	}
 	links := extractLinks(html)
-	urls := cleanLinks(links, root, url)
+	urls := cleanLinks(links, root, requestUrl)
 	if len(urls) > 0 {
 		sm.UpdateUrlWithLinks(url, urls)
 	}
@@ -154,9 +154,8 @@ func getLinks(url, root, parent string, depth int, sm *SiteMap) []string {
 	return urls
 }
 
-func cleanLinks(links []string, root, parent string) []string {
+func cleanLinks(links []string, root string, parentUrl *url.URL) []string {
 	var cLinks []string
-
 
 	for _, link := range links {
 
@@ -182,16 +181,16 @@ func cleanLinks(links []string, root, parent string) []string {
 			log.Printf("error parsing root URL %s", root)
 			continue
 		}
-		parentUrl, err := url.Parse(parent)
-		if err != nil {
-			log.Printf("error parsing parent URL %s", parent)
-			continue
-		}
 
 		if l.Host == "" && strings.HasPrefix(l.Path, "/") {
 			urlLink = &url.URL{Host: rootUrl.Host, Path: l.Path, Scheme: rootUrl.Scheme}
-		} else if l.Host == "" && l.Path != "" {
+		} else if l.Host == "" && l.Path != "" && strings.HasSuffix(parentUrl.Path, "/") {
 			newPath := path.Join(parentUrl.Path, l.Path)
+			urlLink = &url.URL{Host: parentUrl.Host, Path: newPath, Scheme: parentUrl.Scheme}
+		} else if l.Host == "" && l.Path != "" {
+			li := strings.LastIndex(parentUrl.Path, "/")
+			parentPath := parentUrl.Path[:li+1]
+			newPath := path.Join(parentPath, l.Path)
 			urlLink = &url.URL{Host: parentUrl.Host, Path: newPath, Scheme: parentUrl.Scheme}
 		} else if strings.Contains(l.Host, rootUrl.Host) {
 			urlLink = &url.URL{Host: l.Host, Path: l.Path, Scheme: l.Scheme}
@@ -205,21 +204,21 @@ func cleanLinks(links []string, root, parent string) []string {
 	return cLinks
 }
 
-func getHtml(u string) (string, error) {
+func getHtml(u string) (string, *url.URL, error) {
 	resp, err := http.Get(u)
 	if err != nil {
-		return "", err
+		return "", nil, err
 	}
 
 	if resp.StatusCode != http.StatusOK {
-		return "", fmt.Errorf("received HTTP response code %d for site %s", resp.StatusCode, u)
+		return "", resp.Request.URL, fmt.Errorf("received HTTP response code %d for site %s", resp.StatusCode, u)
 	}
 
 	b, err := ioutil.ReadAll(resp.Body)
 	if err != nil {
-		return "", errors.New("error reading response body")
+		return "", resp.Request.URL, errors.New("error reading response body")
 	}
-	return string(b), nil
+	return string(b), resp.Request.URL, nil
 }
 
 func extractLinks(html string) []string {
