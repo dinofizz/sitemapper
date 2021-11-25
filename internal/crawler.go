@@ -145,7 +145,14 @@ func getLinks(url, root, parent string, depth int, sm *SiteMap) []string {
 	if err != nil {
 		log.Printf("error retrieving HTML for URL %s: %s", url, err)
 	}
+	if html == "" {
+		return nil
+	}
 	links := extractLinks(html)
+	if links == nil {
+		return nil
+	}
+
 	urls := cleanLinks(links, root, requestUrl)
 	if len(urls) > 0 {
 		sm.UpdateUrlWithLinks(url, urls)
