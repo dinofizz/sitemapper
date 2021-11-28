@@ -3,7 +3,9 @@ package cmd
 import (
 	"errors"
 	"github.com/spf13/cobra"
+	"io"
 	"log"
+	"os"
 	"sitemapper/internal"
 	"strings"
 	"time"
@@ -58,7 +60,10 @@ var versionCmd = &cobra.Command{
 		end := time.Now()
 		elapsed := end.Sub(start)
 		log.Println("Elapsed milliseconds: ", elapsed.Milliseconds())
-		sm.Dump()
+		_, err := io.Copy(os.Stdout, sm)
+		if err != nil {
+			return err
+		}
 		return nil
 	},
 }
