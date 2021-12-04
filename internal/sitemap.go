@@ -10,7 +10,6 @@ import (
 
 type LinkMap map[string]string
 
-
 type SiteMap struct {
 	mutex   sync.RWMutex
 	sitemap map[string]LinkMap
@@ -74,29 +73,24 @@ func (lm LinkMap) MarshalJSON() ([]byte, error) {
 	return j, nil
 }
 
-func (sm *SiteMap) Read(b []byte) (int, error) {
-	sm.mutex.RLock()
-	defer sm.mutex.RUnlock()
+type CounterWr struct {
+	io.Writer
+	Count int64
+}
 
-	tempMap := map[string][]string{}
+func (cw *CounterWr) Write(p []byte) (n int, err error) {
+	n, err = cw.Writer.Write(p)
+	cw.Count += int64(n)
+	return n, err
+}
 
-	for k := range sm.sitemap {
+func (sm *SiteMap) WriteTo(w io.Writer) (n int64, err error) {
+	cw := &CounterWr{Count: 0, Writer: w}
 
-		linkMap := sm.sitemap[k]
-		links := make([]string, 0)
-		for _, v := range linkMap {
-			links = append(links, v)
-		}
-
-		sort.Strings(links)
-		tempMap[k] = links
-	}
-
-	j, err := json.Marshal(tempMap)
-	if err != nil {
+	enc := json.NewEncoder(cw)
+	if err := enc.Encode(&sm.sitemap); err != nil {
 		return 0, err
-	} else {
-		n := copy(b, j)
-		return n, io.EOF
 	}
+
+	return cw.Count, err
 }
