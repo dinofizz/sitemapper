@@ -1,4 +1,4 @@
-package internal
+package sitemap
 
 import (
 	"context"
@@ -17,7 +17,7 @@ import (
 	"testing"
 )
 
-// Using example for HTTP server graceful shutdown from https://stackoverflow.com/a/42533360
+// startHttpServer is based off the solution for HTTP server graceful shutdown from https://stackoverflow.com/a/42533360
 func startHttpServer(wg *sync.WaitGroup) *http.Server {
 	srv := &http.Server{Addr: ":2015"}
 	fs := http.FileServer(http.Dir("../testsite"))
@@ -35,7 +35,7 @@ func startHttpServer(wg *sync.WaitGroup) *http.Server {
 }
 
 func TestCrawlEngine_Run(t *testing.T) {
-	// Set up the crawler engines we wish to test
+	// Set up the crawlEngine engines we wish to test
 	smSce := NewSiteMap()
 	sce := NewSynchronousCrawlEngine(smSce, 5, "http://localhost:2015")
 	smCce := NewSiteMap()
@@ -50,18 +50,18 @@ func TestCrawlEngine_Run(t *testing.T) {
 	srv := startHttpServer(httpServerExitDone)
 
 	data := []struct {
-		name    string
-		crawler *Crawler
-		sitemap *SiteMap
+		name        string
+		crawlEngine CrawlEngine
+		sitemap     *SiteMap
 	}{
-		{"Synchronous crawl engine", &Crawler{C: sce}, smSce},
-		{"Concurrent crawl engine", &Crawler{C: cce}, smCce},
-		{"Concurrent Limited crawl engine", &Crawler{C: clce}, smClce},
+		{"Synchronous crawl engine", sce, smSce},
+		{"Concurrent crawl engine", cce, smCce},
+		{"Concurrent Limited crawl engine", clce, smClce},
 	}
 
 	for _, d := range data {
 		t.Run(d.name, func(t *testing.T) {
-			d.crawler.Run()
+			d.crawlEngine.Run()
 			// NOTE: The expected output represents the JSON that is printed out
 			// when running the program. The internal sitemap data structure is slightly different
 			// in that the list of links for a parent link is a map and not a slice
@@ -163,7 +163,7 @@ func Test_getHtml(t *testing.T) {
 			sUrl = srv.URL
 			defer srv.Close()
 
-			result, requestUrl, err := getHtml(sUrl)
+			result, requestUrl, err := getHTML(sUrl)
 
 			is.Equal(result, d.expectedBody)
 			is.Equal(requestUrl.String(), sUrl)
@@ -179,7 +179,7 @@ func Test_getHtml(t *testing.T) {
 func Test_getHtml_BadServer(t *testing.T) {
 	is := is.New(t)
 	sUrl := "http://badserver"
-	result, requestUrl, err := getHtml(sUrl)
+	result, requestUrl, err := getHTML(sUrl)
 
 	is.Equal(result, "")
 	is.Equal(requestUrl, nil)
