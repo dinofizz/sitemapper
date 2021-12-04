@@ -1,0 +1,28 @@
+{
+  "http://localhost:2015": [
+    "http://localhost:2015/aubergine",
+    "http://localhost:2015/biscuit/pomegranate.html",
+    "http://localhost:2015/tomato.html"
+  ],
+  "http://localhost:2015/aubergine": [
+    "http://localhost:2015/aubergine/cabbage/banana.html",
+    "http://localhost:2015/biscuit/pomegranate.html",
+    "http://localhost:2015/kiwi.html"
+  ],
+  "http://localhost:2015/aubergine/cabbage/banana.html": [
+    "http://localhost:2015/aubergine/lemon.html",
+    "http://localhost:2015/kiwi.html"
+  ],
+  "http://localhost:2015/aubergine/lemon.html": [
+    "http://localhost:2015/aubergine/cabbage/banana.html",
+    "http://localhost:2015/biscuit/pomegranate.html"
+  ],
+  "http://localhost:2015/biscuit/pomegranate.html": [
+    "http://localhost:2015/aubergine/lemon.html"
+  ],
+  "http://localhost:2015/kiwi.html": [],
+  "http://localhost:2015/tomato.html": [
+    "http://localhost:2015/aubergine/lemon.html",
+    "http://localhost:2015/tomato.html"
+  ]
+}

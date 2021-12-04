@@ -1,4 +1,4 @@
-package internal
+package sitemap
 
 import (
 	"encoding/json"

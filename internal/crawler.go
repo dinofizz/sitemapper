@@ -1,4 +1,5 @@
-package internal
+// Package sitemap contains the data structures and crawl engine implementations for creating a sitemap.
+package sitemap
 
 import (
 	"errors"
@@ -15,67 +16,74 @@ import (
 	"time"
 )
 
+// CrawlEngine is the interface implemented by the various crawl engines.
 type CrawlEngine interface {
 	Run()
-	crawl(u, root, parent string, depth int)
 }
 
-type Crawler struct {
-	C CrawlEngine
-}
-
+// A SynchronousCrawlEngine recursively visits extracted URLs one URL at a time up to a specified tree depth.
 type SynchronousCrawlEngine struct {
 	sm       *SiteMap
 	maxDepth int
-	start    string
+	startURL string
 }
 
+// A ConcurrentCrawlEngine recursively visits extracted URLs up to a specified tree depth,
+// with each visit happening concurrently. A WaitGroup is used to monitor for crawl completion.
 type ConcurrentCrawlEngine struct {
 	SynchronousCrawlEngine
 	WG sync.WaitGroup
 }
 
+// A ConcurrentLimitedCrawlEngine recursively visits extracted URLs up to a specified tree depth,
+// with each visit happening concurrently, with a limit to the number of concurrent visits.
+// A WaitGroup is used to monitor for crawl completion.
 type ConcurrentLimitedCrawlEngine struct {
 	ConcurrentCrawlEngine
 	limiter *Limiter
 }
 
-func NewSynchronousCrawlEngine(sitemap *SiteMap, maxDepth int, start string) *SynchronousCrawlEngine {
-	return &SynchronousCrawlEngine{sm: sitemap, maxDepth: maxDepth, start: start}
+// NewSynchronousCrawlEngine returns a pointer to an instance of a SynchronousCrawlEngine.
+func NewSynchronousCrawlEngine(sitemap *SiteMap, maxDepth int, startURL string) *SynchronousCrawlEngine {
+	return &SynchronousCrawlEngine{sm: sitemap, maxDepth: maxDepth, startURL: startURL}
 }
-func NewConcurrentCrawlEngine(sitemap *SiteMap, maxDepth int, start string) *ConcurrentCrawlEngine {
-	return &ConcurrentCrawlEngine{SynchronousCrawlEngine: SynchronousCrawlEngine{sm: sitemap, maxDepth: maxDepth, start: start}}
+// NewConcurrentCrawlEngine returns a pointer to an instance of a ConcurrentCrawlEngine.
+func NewConcurrentCrawlEngine(sitemap *SiteMap, maxDepth int, startURL string) *ConcurrentCrawlEngine {
+	return &ConcurrentCrawlEngine{SynchronousCrawlEngine: SynchronousCrawlEngine{sm: sitemap, maxDepth: maxDepth, startURL: startURL}}
 }
 
-func NewConcurrentLimitedCrawlEngine(sitemap *SiteMap, maxDepth int, start string, limiter *Limiter) *ConcurrentLimitedCrawlEngine {
+// NewConcurrentLimitedCrawlEngine returns a pointer to an instance of a ConcurrentLimitedCrawlEngine.
+func NewConcurrentLimitedCrawlEngine(sitemap *SiteMap, maxDepth int, startURL string, limiter *Limiter) *ConcurrentLimitedCrawlEngine {
 	return &ConcurrentLimitedCrawlEngine{
 		ConcurrentCrawlEngine: ConcurrentCrawlEngine{
 			SynchronousCrawlEngine: SynchronousCrawlEngine{
 				sm:       sitemap,
 				maxDepth: maxDepth,
-				start:    start,
+				startURL: startURL,
 			},
 		},
 		limiter: limiter,
 	}
 }
 
-func (mc Crawler) Run() {
-	mc.C.Run()
-}
+// Run begins the sitemap crawl activity for the SynchronousCrawlEngine.
 func (c *SynchronousCrawlEngine) Run() {
-	c.crawl(c.start, c.start, c.start, 0)
+	c.crawl(c.startURL, c.startURL, c.startURL, 0)
 }
 
+// Run begins the sitemap crawl activity for the ConcurrentCrawlEngine.
 func (c *ConcurrentCrawlEngine) Run() {
-	c.crawl(c.start, c.start, c.start, 0)
+	c.crawl(c.startURL, c.startURL, c.startURL, 0)
 	c.WG.Wait()
 }
+// Run begins the sitemap crawl activity for the ConcurrentLimitedCrawlEngine.
 func (c *ConcurrentLimitedCrawlEngine) Run() {
-	c.crawl(c.start, c.start, c.start, 0)
+	c.crawl(c.startURL, c.startURL, c.startURL, 0)
 	c.WG.Wait()
 }
 
+// crawl is the recursive function which is called for each visit to a specified URL.
+// For the SynchronousCrawlEngine, crawl performs a recursive synchronous depth-first traversal.
 func (c *SynchronousCrawlEngine) crawl(u, root, parent string, depth int) {
 	if c.maxDepth == depth {
 		return
@@ -88,6 +96,9 @@ func (c *SynchronousCrawlEngine) crawl(u, root, parent string, depth int) {
 	}
 }
 
+// crawl is the recursive function which is called for each visit to a specified URL.
+// For the ConcurrentCrawlEngine, crawl performs a recursive concurrent traversal where each URL at each depth
+// is crawled in a new goroutine concurrently. A WaitGroup keeps track of the number of goroutines.
 func (c *ConcurrentCrawlEngine) crawl(u, root, parent string, depth int) {
 	if c.maxDepth == depth {
 		return
@@ -104,6 +115,10 @@ func (c *ConcurrentCrawlEngine) crawl(u, root, parent string, depth int) {
 	}
 }
 
+// crawl is the recursive function which is called for each visit to a specified URL.
+// For the ConcurrentLimitedCrawlEngine, crawl performs a recursive concurrent traversal where each URL at each depth
+// is crawled in a new goroutine concurrently, with a limited enforcing the maximum number of concurrent goroutines.
+// A WaitGroup keeps track of the number of goroutines.
 func (c *ConcurrentLimitedCrawlEngine) crawl(u, root, parent string, depth int) {
 	if c.maxDepth == depth {
 		return
@@ -133,6 +148,9 @@ func (c *ConcurrentLimitedCrawlEngine) crawl(u, root, parent string, depth int) 
 	}
 }
 
+// getLinks performs a series of tasks, calling into other functions responsible for fetching the HTML,
+// extracting any links, and then cleaning the extracted links.
+// getLinks returns a slice of strings of relevant and applicable links as related to the parent and root URLs.
 func getLinks(url, root, parent string, depth int, sm *SiteMap) []string {
 	if urls, exists := sm.GetLinks(url); exists {
 		return urls
@@ -141,7 +159,7 @@ func getLinks(url, root, parent string, depth int, sm *SiteMap) []string {
 	sm.AddUrl(url)
 	log.Printf("visiting URL %s at depth %d with parent %s", url, depth, parent)
 
-	html, requestUrl, err := getHtml(url)
+	html, requestUrl, err := getHTML(url)
 	if err != nil {
 		log.Printf("error retrieving HTML for URL %s: %s", url, err)
 		return nil
@@ -162,6 +180,9 @@ func getLinks(url, root, parent string, depth int, sm *SiteMap) []string {
 	return urls
 }
 
+// cleanLinks accepts a list of links and applies a set of rules to determine whether the links should be included
+// in the sitemap results
+// cleanLinks returns a slice of full URLs strings including scheme, host and path for any applicable links.
 func cleanLinks(links []string, root string, parentUrl *url.URL) []string {
 	var cLinks []string
 
@@ -212,7 +233,8 @@ func cleanLinks(links []string, root string, parentUrl *url.URL) []string {
 	return cLinks
 }
 
-func getHtml(u string) (string, *url.URL, error) {
+// getHTML visits the provided URL and returns any HTML in the response as a string.
+func getHTML(u string) (string, *url.URL, error) {
 	resp, err := http.Get(u)
 	if err != nil {
 		return "", nil, err
@@ -229,6 +251,7 @@ func getHtml(u string) (string, *url.URL, error) {
 	return string(b), resp.Request.URL, nil
 }
 
+// extractLinks applies a regular expression pattern to an HTML string and returns a slice of string links
 func extractLinks(html string) []string {
 	re := regexp.MustCompile(`<a\s+(?:[^>]*?\s+)?href=(\S+?)[\s>]`)
 	matches := re.FindAllStringSubmatch(html, -1)

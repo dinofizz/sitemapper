@@ -1,11 +1,11 @@
-package internal
+package sitemap
 
 import (
 	"errors"
 )
 
 type Limiter struct {
-	ch chan struct{}
+	ch    chan struct{}
 	limit int
 }
 
@@ -17,7 +17,7 @@ func NewLimiter(limit int) *Limiter {
 	}
 
 	return &Limiter{
-		ch: ch,
+		ch:    ch,
 		limit: limit,
 	}
 }
@@ -32,5 +32,4 @@ func (l *Limiter) RunFunc(f func()) error {
 	default:
 		return errors.New("limit reached, try again later")
 	}
-
 }
