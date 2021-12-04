@@ -1,6 +1,8 @@
 package internal
 
 import (
+	"context"
+	"encoding/json"
 	"errors"
 	"github.com/matryer/is"
 	"io/ioutil"
@@ -9,9 +11,99 @@ import (
 	"net/http"
 	"net/http/httptest"
 	"net/url"
+	"os"
 	"strings"
+	"sync"
 	"testing"
 )
+
+// Using example for HTTP server graceful shutdown from https://stackoverflow.com/a/42533360
+func startHttpServer(wg *sync.WaitGroup) *http.Server {
+	srv := &http.Server{Addr: ":2015"}
+	fs := http.FileServer(http.Dir("../testsite"))
+
+	http.Handle("/", fs)
+
+	go func() {
+		defer wg.Done()
+		if err := srv.ListenAndServe(); err != http.ErrServerClosed {
+			log.Fatalf("ListenAndServe(): %v", err)
+		}
+	}()
+
+	return srv
+}
+
+func TestCrawlEngine_Run(t *testing.T) {
+	// Set up the crawler engines we wish to test
+	smSce := NewSiteMap()
+	sce := NewSynchronousCrawlEngine(smSce, 5, "http://localhost:2015")
+	smCce := NewSiteMap()
+	cce := NewConcurrentCrawlEngine(smCce, 5, "http://localhost:2015")
+	limiter := NewLimiter(1)
+	smClce := NewSiteMap()
+	clce := NewConcurrentLimitedCrawlEngine(smClce, 5, "http://localhost:2015", limiter)
+
+	// Run a local HTTP server serving static content pointing to the "testsite" directory
+	httpServerExitDone := &sync.WaitGroup{}
+	httpServerExitDone.Add(1)
+	srv := startHttpServer(httpServerExitDone)
+
+	data := []struct {
+		name    string
+		crawler *Crawler
+		sitemap *SiteMap
+	}{
+		{"Synchronous crawl engine", &Crawler{C: sce}, smSce},
+		{"Concurrent crawl engine", &Crawler{C: cce}, smCce},
+		{"Concurrent Limited crawl engine", &Crawler{C: clce}, smClce},
+	}
+
+	for _, d := range data {
+		t.Run(d.name, func(t *testing.T) {
+			d.crawler.Run()
+			// NOTE: The expected output represents the JSON that is printed out
+			// when running the program. The internal sitemap data structure is slightly different
+			// in that the list of links for a parent link is a map and not a slice
+			// So in the test below we marshal out from the internal sitemap to a byte slice
+			// (there is a custom JSONMarshal for the map to slice conversion).
+			// This is then unmarshalled into a map of slices, which we can then more easily compare
+			// with the expected output which is stored in JSON file.
+
+			out, err := json.Marshal(d.sitemap.sitemap)
+			if err != nil {
+				t.Fatal(err)
+			}
+			var actualResults map[string][]string
+			err = json.Unmarshal(out, &actualResults)
+			if err != nil {
+				t.Fatal(err)
+			}
+
+			resultsFile, err := os.Open("testdata/integration_test_results.json")
+			if err != nil {
+				t.Fatal(err)
+			}
+
+			var expectedResults map[string][]string
+			err = json.NewDecoder(resultsFile).Decode(&expectedResults)
+			if err != nil {
+				t.Fatal(err)
+			}
+
+			is := is.New(t)
+
+			is.True(len(d.sitemap.sitemap) == len(expectedResults))
+			is.Equal(actualResults, expectedResults)
+		})
+	}
+
+	if err := srv.Shutdown(context.Background()); err != nil {
+		t.Fatal(err)
+	}
+
+	httpServerExitDone.Wait()
+}
 
 func Test_extractLinks(t *testing.T) {
 
@@ -29,7 +121,7 @@ func Test_extractLinks(t *testing.T) {
 		t.Run(d.name, func(t *testing.T) {
 			file, err := ioutil.ReadFile(d.testfile)
 			if err != nil {
-				t.Fail()
+				t.Fatal(err)
 			}
 			html := string(file)
 			links := extractLinks(html)

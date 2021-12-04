@@ -12,7 +12,7 @@ func TestSiteMap_AddUrl(t *testing.T) {
 
 	is := is2.New(t)
 
-	is.Equal(sm.sitemap["https://www.example.com"], map[string]string{})
+	is.Equal(sm.sitemap["https://www.example.com"], LinkMap{})
 }
 
 func TestSiteMap_UpdateUrlWithLinks(t *testing.T) {
@@ -25,7 +25,7 @@ func TestSiteMap_UpdateUrlWithLinks(t *testing.T) {
 	is := is2.New(t)
 	sm.UpdateUrlWithLinks(u, links)
 
-	expectedMap := map[string]string{
+	expectedMap := LinkMap{
 		"https://link.one": "https://link.one/",
 		"https://link.two": "https://link.two",
 	}

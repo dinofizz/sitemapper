@@ -8,13 +8,16 @@ import (
 	"sync"
 )
 
+type LinkMap map[string]string
+
+
 type SiteMap struct {
 	mutex   sync.RWMutex
-	sitemap map[string]map[string]string
+	sitemap map[string]LinkMap
 }
 
 func NewSiteMap() *SiteMap {
-	return &SiteMap{sitemap: map[string]map[string]string{}}
+	return &SiteMap{sitemap: map[string]LinkMap{}}
 }
 
 func (sm *SiteMap) GetLinks(u string) ([]string, bool) {
@@ -54,6 +57,21 @@ func (sm *SiteMap) UpdateUrlWithLinks(u string, newLinks []string) {
 	}
 
 	sm.sitemap[s] = linkMap
+}
+
+func (lm LinkMap) MarshalJSON() ([]byte, error) {
+	links := make([]string, 0)
+	for _, v := range lm {
+		links = append(links, v)
+	}
+
+	sort.Strings(links)
+	j, err := json.Marshal(links)
+	if err != nil {
+		return j, err
+	}
+
+	return j, nil
 }
 
 func (sm *SiteMap) Read(b []byte) (int, error) {
