@@ -1,17 +1,68 @@
 package cmd
 
 import (
+	"errors"
 	"fmt"
 	"github.com/spf13/cobra"
+	"log"
 	"os"
+	sitemap "sitemapper/internal"
+	"strings"
+	"time"
 )
+
+var depth int
+var site string
+var mode string
+var limit int
+
+func init() {
+	rootCmd.Flags().IntVarP(&depth, "depth", "d", 1, "Specify crawl depth")
+	rootCmd.Flags().StringVarP(&site, "site", "s", "", "Site to crawl, including http scheme")
+	rootCmd.Flags().StringVarP(&mode, "mode", "m", "concurrent", "Specify mode: synchronous, concurrent, limited")
+	rootCmd.Flags().IntVarP(&limit, "limit", "l", 10, "Specify max concurrent crawl tasks for limited mode")
+	err := rootCmd.MarkFlagRequired("site")
+	if err != nil {
+		log.Fatalf(err.Error())
+	}
+}
 
 var rootCmd = &cobra.Command{
 	Use:   "sitemapper",
-	Short: "Creates a text based sitemap",
-	Long: "Creates a text based sitemap, with configurable depth.",
-	Run: func(cmd *cobra.Command, args []string) {
-		// Do Stuff Here
+	Short: "Crawls from a start URL and writes a JSON based sitemap to stdout",
+	RunE: func(cmd *cobra.Command, args []string) error {
+		startUrl := strings.ToLower(site)
+		sm := sitemap.NewSiteMap()
+		var c sitemap.CrawlEngine
+		c = sitemap.NewConcurrentCrawlEngine(sm, depth, startUrl)
+		if mode != "" {
+			switch mode {
+			case "synchronous":
+				c = sitemap.NewSynchronousCrawlEngine(sm, depth, startUrl)
+			case "concurrent":
+				c = sitemap.NewConcurrentCrawlEngine(sm, depth, startUrl)
+			case "limited":
+				if limit <= 0 {
+					return errors.New("invalid limit")
+				}
+				l := sitemap.NewLimiter(limit)
+				c = sitemap.NewConcurrentLimitedCrawlEngine(sm, depth, startUrl, l)
+			default:
+				return errors.New("unsupported mode")
+			}
+		}
+
+		log.Printf("Crawling %s with depth %d", site, depth)
+		start := time.Now()
+		c.Run()
+		end := time.Now()
+		elapsed := end.Sub(start)
+		log.Println("Elapsed milliseconds: ", elapsed.Milliseconds())
+		_, err := sm.WriteTo(os.Stdout)
+		if err != nil {
+			return err
+		}
+		return nil
 	},
 }
 
