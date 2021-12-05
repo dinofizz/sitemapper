@@ -10,6 +10,7 @@ import (
 
 // links is a type definition which is used internally as a list of links found at a parent URL.
 // The use of a map ensures that we don't write duplicate entries, and negates the need for searching a slice.
+// TODO: rethink this structure, not sure if I need the values AND the keys.
 type links map[string]string
 
 // A SiteMap is the data structure used to store a list of links found at crawled URLs. A sync.RWMutex provides

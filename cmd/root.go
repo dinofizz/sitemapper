@@ -3,10 +3,10 @@ package cmd
 import (
 	"errors"
 	"fmt"
+	"github.com/dinofizz/sitemapper/internal"
 	"github.com/spf13/cobra"
 	"log"
 	"os"
-	sitemap "sitemapper/internal"
 	"strings"
 	"time"
 )

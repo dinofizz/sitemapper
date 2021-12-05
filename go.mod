@@ -1,4 +1,4 @@
-module sitemapper
+module github.com/dinofizz/sitemapper
 
 go 1.17
 

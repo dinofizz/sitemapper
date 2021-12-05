@@ -1,6 +1,6 @@
 package main
 
-import "sitemapper/cmd"
+import "github.com/dinofizz/sitemapper/cmd"
 
 func main() {
 	cmd.Execute()
