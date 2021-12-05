@@ -8,7 +8,7 @@ on:
   workflow_dispatch:
 
 jobs:
-  build:
+  buildAndTest:
     runs-on: ubuntu-latest
     steps:
     - uses: actions/checkout@v2
@@ -24,5 +24,9 @@ jobs:
     - name: golangci-lint
       uses: golangci/golangci-lint-action@v2
 
-    - name: Test
-      run: go test -v ./...
+    - name: Test with Coverage
+      run: go test -race -covermode=atomic -coverprofile=coverage.out ./...
+    - name: Upload coverage to Codecov
+      run: bash <(curl -s https://codecov.io/bash)
+      env:
+        CODECOV_TOKEN: 62c88c08-1beb-4712-bf97-e5d3e77d21f5
