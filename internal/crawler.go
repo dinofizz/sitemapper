@@ -156,7 +156,7 @@ func getLinks(url, root, parent string, depth int, sm *SiteMap) []string {
 		return urls
 	}
 
-	sm.AddUrl(url)
+	sm.AddURL(url)
 	log.Printf("visiting URL %s at depth %d with parent %s", url, depth, parent)
 
 	html, requestUrl, err := getHTML(url)
@@ -174,7 +174,7 @@ func getLinks(url, root, parent string, depth int, sm *SiteMap) []string {
 
 	urls := cleanLinks(links, root, requestUrl)
 	if len(urls) > 0 {
-		sm.UpdateUrlWithLinks(url, urls)
+		sm.UpdateURLWithLinks(url, urls)
 	}
 
 	return urls
