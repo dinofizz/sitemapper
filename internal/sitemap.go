@@ -62,7 +62,7 @@ func (sm *SiteMap) UpdateURLWithLinks(u string, newLinks []string) {
 
 	for _, nl := range newLinks {
 		l := strings.TrimSuffix(nl, "/")
-		linkMap[s] = l
+		linkMap[l] = nl
 	}
 
 	sm.sitemap[s] = linkMap

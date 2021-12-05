@@ -47,6 +47,7 @@ type ConcurrentLimitedCrawlEngine struct {
 func NewSynchronousCrawlEngine(sitemap *SiteMap, maxDepth int, startURL string) *SynchronousCrawlEngine {
 	return &SynchronousCrawlEngine{sm: sitemap, maxDepth: maxDepth, startURL: startURL}
 }
+
 // NewConcurrentCrawlEngine returns a pointer to an instance of a ConcurrentCrawlEngine.
 func NewConcurrentCrawlEngine(sitemap *SiteMap, maxDepth int, startURL string) *ConcurrentCrawlEngine {
 	return &ConcurrentCrawlEngine{SynchronousCrawlEngine: SynchronousCrawlEngine{sm: sitemap, maxDepth: maxDepth, startURL: startURL}}
@@ -76,6 +77,7 @@ func (c *ConcurrentCrawlEngine) Run() {
 	c.crawl(c.startURL, c.startURL, c.startURL, 0)
 	c.WG.Wait()
 }
+
 // Run begins the sitemap crawl activity for the ConcurrentLimitedCrawlEngine.
 func (c *ConcurrentLimitedCrawlEngine) Run() {
 	c.crawl(c.startURL, c.startURL, c.startURL, 0)

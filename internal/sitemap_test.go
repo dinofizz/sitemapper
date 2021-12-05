@@ -42,14 +42,14 @@ func TestSiteMap_WriteTo(t *testing.T) {
 		"https://www.example.com": {
 			"https://link.one/",
 			"https://link.two",
-				},
+		},
 	}
 	is := is2.New(t)
 	var output map[string][]string
 
 	sm.AddURL(u)
 	sm.UpdateURLWithLinks(u, links)
-    var b bytes.Buffer
+	var b bytes.Buffer
 	_, err := sm.WriteTo(&b)
 	if err != nil {
 		t.Fatal(err)
