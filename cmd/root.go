@@ -59,10 +59,7 @@ var rootCmd = &cobra.Command{
 		elapsed := end.Sub(start)
 		log.Println("Elapsed milliseconds: ", elapsed.Milliseconds())
 		_, err := sm.WriteTo(os.Stdout)
-		if err != nil {
-			return err
-		}
-		return nil
+		return err
 	},
 }
 
