@@ -289,8 +289,8 @@ func Test_getLinks(t *testing.T) {
 			depth := 1
 			sm := NewSiteMap()
 			if d.existingLinks {
-				sm.AddUrl(srv.URL)
-				sm.UpdateUrlWithLinks(srv.URL, d.expectedLinks)
+				sm.AddURL(srv.URL)
+				sm.UpdateURLWithLinks(srv.URL, d.expectedLinks)
 			}
 
 			links := getLinks(sUrl, root, parent, depth, sm)

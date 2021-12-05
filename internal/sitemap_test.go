@@ -9,24 +9,24 @@ import (
 
 func TestSiteMap_AddUrl(t *testing.T) {
 	sm := NewSiteMap()
-	sm.AddUrl("https://www.example.com")
+	sm.AddURL("https://www.example.com")
 
 	is := is2.New(t)
 
-	is.Equal(sm.sitemap["https://www.example.com"], LinkMap{})
+	is.Equal(sm.sitemap["https://www.example.com"], links{})
 }
 
 func TestSiteMap_UpdateUrlWithLinks(t *testing.T) {
 	sm := NewSiteMap()
 	u := "https://www.example.com"
-	sm.AddUrl(u)
+	sm.AddURL(u)
 
-	links := []string{"https://link.one/", "https://link.two"}
+	l := []string{"https://link.one/", "https://link.two"}
 
 	is := is2.New(t)
-	sm.UpdateUrlWithLinks(u, links)
+	sm.UpdateURLWithLinks(u, l)
 
-	expectedMap := LinkMap{
+	expectedMap := links{
 		"https://link.one": "https://link.one/",
 		"https://link.two": "https://link.two",
 	}
@@ -47,8 +47,8 @@ func TestSiteMap_WriteTo(t *testing.T) {
 	is := is2.New(t)
 	var output map[string][]string
 
-	sm.AddUrl(u)
-	sm.UpdateUrlWithLinks(u, links)
+	sm.AddURL(u)
+	sm.UpdateURLWithLinks(u, links)
     var b bytes.Buffer
 	_, err := sm.WriteTo(&b)
 	if err != nil {
