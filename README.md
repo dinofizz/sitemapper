@@ -1,0 +1,121 @@
+# sitemapper
+
+sitemapper is a site mapping tool which provides a JSON output detailing each page visited, each with a list of links that are related to the root URL. The depth to which sitemapper will explore a site is configurable, as well as the mode of operation: "synchronous", "concurrent" and "concurrent limited".
+
+Example:
+
+```shell
+$ ./sitemapper -s https://www.google.com | jq
+2021/12/05 16:26:26 Crawling https://www.google.com with depth 1
+2021/12/05 16:26:26 visiting URL https://www.google.com at depth 0 with parent https://www.google.com
+2021/12/05 16:26:26 Elapsed milliseconds:  123
+{
+  "https://www.google.com": [
+    "https://www.google.com/advanced_search",
+    "https://www.google.com/intl/en/about.html",
+    "https://www.google.com/intl/en/ads/",
+    "https://www.google.com/intl/en/policies/privacy/",
+    "https://www.google.com/intl/en/policies/terms/",
+    "https://www.google.com/preferences",
+    "https://www.google.com/services/",
+    "https://www.google.com/setprefdomain"
+  ]
+}
+```
+*Note: the above example pipes the output of sitemapper into an additional JSON formatting tool, "[jq](https://stedolan.github.io/jq/)".*
+
+**This tool is _not_ intended to be used for any serious sitemapping activities.** It is a means for me to continue learning how to write idiomatic Go. Mapping a site provides a problem which lends allows me to practise writing Go code, playing with Go's concurrency features, as well as learn about project structure, writing tests, and interacting with 3rd party libraries (Cobra). Further elaboration below.
+
+## Things I've Learnt
+Some things this repo includes which are examples of Go language features and patterns which I am learning:
+
+### Concurrency
+
+I make use of channels and sync.WaitGroup to run multiple goroutines, as well as using a buffered channel to implement a concurrency "limiter".
+  * See [crawler.go](internal/crawler.go) for 3 crawl engine implementations:
+    * **Synchronous**: recursively visits extracted URLs one URL at a time up to a specified tree depth.
+    * **Concurrent**: recursively visits extracted URLs up to a specified tree depth, with each visit happening concurrently. A WaitGroup is used to monitor for crawl completion.
+    * **Concurrent Limited**: recursively visits extracted URLs up to a specified tree depth, with each visit happening concurrently, with a limit to the number of concurrent visits. If a crawl is attempted when the concurrency limit has been reached the code waits for a random amount of time before attempting to execute again. A WaitGroup is used to monitor for crawl completion.
+      * See [limiter.go](internal/limiter.go)
+  * See [sitemap.go](internal/sitemap.go) for use of a `sync.RWMutex` to manage concurrent access to an internal map data structure.
+
+### Interfaces
+
+[crawler.go](internal/crawler.go) provides three different implementations of a `Run` method, defined in the `CrawlEngine` interface, for the three different concurrency modes featured by sitemapper. Commandline options parsed by [root.go](cmd/root.go) determine which implementation is used at runtime.
+
+### Standard Library Interfaces
+
+[sitemap.go](internal/sitemap.go) includes the `SiteMap` struct which has an implementation of `io.WriteTo`, allowing the sitemap contents to be written to anything that meets the `io.Writer` interface. Additionally the implementation of the `WriteTo` method requires an implementation of a custom `io.Writer` `Write` function so that the number of bytes written can be returned.
+
+### HTTP requests
+[crawler.go](internal/crawler.go) includes a few lines of code where `http.Get` is used and the response inspected.
+
+### JSON
+
+The output of sitemapper is JSON written to stdout. [sitemap.go](internal/sitemap.go) includes a custom `JSONMarshal` function which provides a cleaner mapping of the internal sitemap structure to a more readable dictionary of string arrays.
+
+### Third Party Packages
+
+* I'm using [Cobra](https://github.com/spf13/cobra) to parse and map CLI arguments to application features.
+* I'm using [Is](https://github.com/matryer/is) to provide basic lightweight test assertions.
+
+### Tests
+
+* Table tests: Many of the tests in [crawler_test.go](internal/crawler_test.go) make use of table tests to cover a range of inputs and expected outputs.
+* testdata: [crawler_test.go](internal/crawler_test.go) uses files in the testdata folder to store expected values.
+
+## Build
+
+A makefile is included to facilitate build and test activities. To build the project run:
+
+```shell
+make build
+```
+
+## Test
+
+To run the available tests, issue the following command:
+
+```shell
+make test
+```
+
+Note that the above command will run tests with code coverage enabled.
+
+## Usage
+
+```shell
+$ ./sitemapper -h                                                                                                                                                                                                                                                                                 *[main]
+Crawls from a start URL and writes a JSON based sitemap to stdout
+
+Usage:
+  sitemapper [flags]
+
+Flags:
+  -d, --depth int     Specify crawl depth (default 1)
+  -h, --help          help for sitemapper
+  -l, --limit int     Specify max concurrent crawl tasks for limited mode (default 10)
+  -m, --mode string   Specify mode: synchronous, concurrent, limited (default "concurrent")
+  -s, --site string   Site to crawl, including http scheme
+
+```
+
+### Examples
+
+#### Concurrent crawl of https://dinofizzotti.com with depth 1
+
+```shell
+./sitemapper -s https://dinofizzotti.com
+```
+
+#### Synchronous crawl of https://dinofizzotti.com with depth 3
+
+```shell
+./sitemapper -s https://dinofizzotti.com -d 3 --mode synchronous
+```
+
+#### Concurrent Limited crawl of https://dinofizzotti.com with depth 3 and concurrency limit 5
+
+```shell
+./sitemapper -s https://dinofizzotti.com -d 3 --mode limited -l 5
+```
