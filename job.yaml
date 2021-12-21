@@ -1,0 +1,17 @@
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: sitemapper-job
+spec:
+  ttlSecondsAfterFinished: 10
+  template:
+    spec:
+      containers:
+      - image: k3d-sitemapper-registry:40213/sitemapper-job:latest
+        name: sitemapper-job
+        command: ["/sitemapper",  "-s", "https://dinofizzotti.com", "--id", "12345"]
+        envFrom:
+          - configMapRef:
+              name: sitemapper
+        resources: {}
+      restartPolicy: Never

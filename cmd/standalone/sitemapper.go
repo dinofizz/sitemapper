@@ -1,4 +1,4 @@
-package cmd
+package main
 
 import (
 	"errors"
@@ -37,10 +37,9 @@ var rootCmd = &cobra.Command{
 		c = sitemap.NewConcurrentCrawlEngine(sm, depth, startUrl)
 		if mode != "" {
 			switch mode {
+			case "concurrent": // default mode if none specified
 			case "synchronous":
 				c = sitemap.NewSynchronousCrawlEngine(sm, depth, startUrl)
-			case "concurrent":
-				c = sitemap.NewConcurrentCrawlEngine(sm, depth, startUrl)
 			case "limited":
 				if limit <= 0 {
 					return errors.New("invalid limit")
@@ -63,7 +62,7 @@ var rootCmd = &cobra.Command{
 	},
 }
 
-func Execute() {
+func main() {
 	if err := rootCmd.Execute(); err != nil {
 		fmt.Fprintln(os.Stderr, err)
 		os.Exit(1)
