@@ -3,6 +3,19 @@
 # Declare variables to be passed into your templates.
 
 replicaCount: 1
+namespace: sitemapper
+
+crawlmanager:
+  image:
+    repository: k3d-sitemapper-registry:40213/crawlmanager
+    pullPolicy: Always
+    tag: latest
+crawlJob:
+  image:
+    repository: k3d-sitemapper-registry:40213/sitemapper-job
+    pullPolicy: Always
+    tag: latest
+
 
 image:
   repository: nginx
@@ -39,6 +52,7 @@ securityContext: {}
 nats:
   server: nats://sitemapper-nats:4222
   resultsSubject: results
+  crawlSubject: crawl
 
 service:
   type: ClusterIP

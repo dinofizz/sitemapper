@@ -1,0 +1,19 @@
+apiVersion: skaffold/v2beta26
+kind: Config
+build:
+  artifacts:
+  - image: crawlmanager
+    docker:
+      dockerfile: infrastructure/dockerfile-crawlmanager
+      noCache: true
+  insecureRegistries:
+    - k3d-dregistry:12345
+deploy:
+  helm:
+    releases:
+    - name: sitemapper
+      chartPath: helm/sitemapper
+      artifactOverrides:
+        crawlmanager.image: crawlmanager
+      imageStrategy:
+        helm: {}

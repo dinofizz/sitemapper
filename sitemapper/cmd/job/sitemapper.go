@@ -3,7 +3,7 @@ package main
 import (
 	"bytes"
 	"fmt"
-	"github.com/dinofizz/sitemapper/internal"
+	"github.com/dinofizz/sitemapper/sitemapper/internal"
 	"github.com/spf13/cobra"
 	"log"
 	"os"

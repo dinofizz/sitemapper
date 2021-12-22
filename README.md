@@ -32,27 +32,27 @@ Some things this repo includes which are examples of Go language features and pa
 ### Concurrency
 
 I make use of channels and sync.WaitGroup to run multiple goroutines, as well as using a buffered channel to implement a concurrency "limiter".
-  * See [crawler.go](internal/crawler.go) for 3 crawl engine implementations:
+  * See [crawler.go](sitemapper/internal/crawler.go) for 3 crawl engine implementations:
     * **Synchronous**: recursively visits extracted URLs one URL at a time up to a specified tree depth.
     * **Concurrent**: recursively visits extracted URLs up to a specified tree depth, with each visit happening concurrently. A WaitGroup is used to monitor for crawl completion.
     * **Concurrent Limited**: recursively visits extracted URLs up to a specified tree depth, with each visit happening concurrently, with a limit to the number of concurrent visits. If a crawl is attempted when the concurrency limit has been reached the code waits for a random amount of time before attempting to execute again. A WaitGroup is used to monitor for crawl completion.
-      * See [limiter.go](internal/limiter.go)
-  * See [sitemap.go](internal/sitemap.go) for use of a `sync.RWMutex` to manage concurrent access to an internal map data structure.
+      * See [limiter.go](sitemapper/internal/limiter.go)
+  * See [sitemap.go](sitemapper/internal/sitemap.go) for use of a `sync.RWMutex` to manage concurrent access to an internal map data structure.
 
 ### Interfaces
 
-[crawler.go](internal/crawler.go) provides three different implementations of a `Run` method, defined in the `CrawlEngine` interface, for the three different concurrency modes featured by sitemapper. Commandline options parsed by [root.go](cmd/root.go) determine which implementation is used at runtime.
+[crawler.go](sitemapper/internal/crawler.go) provides three different implementations of a `Run` method, defined in the `CrawlEngine` interface, for the three different concurrency modes featured by sitemapper. Commandline options parsed by [root.go](sitemapper/cmd/root.go) determine which implementation is used at runtime.
 
 ### Standard Library Interfaces
 
-[sitemap.go](internal/sitemap.go) includes the `SiteMap` struct which has an implementation of `io.WriteTo`, allowing the sitemap contents to be written to anything that meets the `io.Writer` interface. Additionally the implementation of the `WriteTo` method requires an implementation of a custom `io.Writer` `Write` function so that the number of bytes written can be returned.
+[sitemap.go](sitemapper/internal/sitemap.go) includes the `SiteMap` struct which has an implementation of `io.WriteTo`, allowing the sitemap contents to be written to anything that meets the `io.Writer` interface. Additionally the implementation of the `WriteTo` method requires an implementation of a custom `io.Writer` `Write` function so that the number of bytes written can be returned.
 
 ### HTTP requests
-[crawler.go](internal/crawler.go) includes a few lines of code where `http.Get` is used and the response inspected.
+[crawler.go](sitemapper/internal/crawler.go) includes a few lines of code where `http.Get` is used and the response inspected.
 
 ### JSON
 
-The output of sitemapper is JSON written to stdout. [sitemap.go](internal/sitemap.go) includes a custom `JSONMarshal` function which provides a cleaner mapping of the internal sitemap structure to a more readable dictionary of string arrays.
+The output of sitemapper is JSON written to stdout. [sitemap.go](sitemapper/internal/sitemap.go) includes a custom `JSONMarshal` function which provides a cleaner mapping of the internal sitemap structure to a more readable dictionary of string arrays.
 
 ### Third Party Packages
 
@@ -61,8 +61,8 @@ The output of sitemapper is JSON written to stdout. [sitemap.go](internal/sitema
 
 ### Tests
 
-* Table tests: Many of the tests in [crawler_test.go](internal/crawler_test.go) make use of table tests to cover a range of inputs and expected outputs.
-* testdata: [crawler_test.go](internal/crawler_test.go) uses files in the testdata folder to store expected values.
+* Table tests: Many of the tests in [crawler_test.go](sitemapper/internal/crawler_test.go) make use of table tests to cover a range of inputs and expected outputs.
+* testdata: [crawler_test.go](sitemapper/internal/crawler_test.go) uses files in the testdata folder to store expected values.
 
 ## Build
 
