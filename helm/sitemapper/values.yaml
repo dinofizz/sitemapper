@@ -8,12 +8,12 @@ namespace: sitemapper
 crawlmanager:
   image:
     repository: k3d-sitemapper-registry:40213/crawlmanager
-    pullPolicy: Always
+    pullPolicy: IfNotPresent
     tag: latest
 crawlJob:
   image:
     repository: k3d-sitemapper-registry:40213/sitemapper-job
-    pullPolicy: Always
+    pullPolicy: IfNotPresent
     tag: latest
 
 

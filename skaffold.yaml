@@ -5,9 +5,9 @@ build:
   - image: crawlmanager
     docker:
       dockerfile: infrastructure/dockerfile-crawlmanager
-      noCache: true
-  insecureRegistries:
-    - k3d-dregistry:12345
+  - image: crawljob
+    docker:
+      dockerfile: infrastructure/dockerfile-job
 deploy:
   helm:
     releases:
@@ -15,5 +15,6 @@ deploy:
       chartPath: helm/sitemapper
       artifactOverrides:
         crawlmanager.image: crawlmanager
+        crawlJob.image: crawljob
       imageStrategy:
         helm: {}

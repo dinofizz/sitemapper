@@ -16,7 +16,7 @@ RUN go mod download
 COPY ./ ./
 
 # Build the executable
-RUN CGO_ENABLED=0 go build -v -o /sitemapper ./cmd/job
+RUN CGO_ENABLED=0 go build -v -o /sitemapper ./sitemapper/cmd/job
 
 # STAGE 2: build the container to run
 FROM scratch AS final
