@@ -44,7 +44,17 @@ func main() {
 		wg.Done()
 	}()
 
+	createReadyFile()
 	wg.Wait()
+}
+
+func createReadyFile() {
+	emptyFile, err := os.Create("/ready/ready.txt")
+	if err != nil {
+		panic(err)
+	}
+	log.Println("Created ready.txt")
+	emptyFile.Close()
 }
 
 func (cm *CrawlManager) HandleCrawlMessage(c *crawl) {

@@ -37,10 +37,13 @@ spec:
 {{/*            httpGet:*/}}
 {{/*              path: /*/}}
 {{/*              port: http*/}}
-{{/*          readinessProbe:*/}}
-{{/*            httpGet:*/}}
-{{/*              path: /*/}}
-{{/*              port: http*/}}
+          readinessProbe:
+            exec:
+              command:
+                - stat
+                - /ready/ready.txt
+            initialDelaySeconds: 5
+            periodSeconds: 5
           resources:
             {{- toYaml .Values.resources | nindent 12 }}
           envFrom:
