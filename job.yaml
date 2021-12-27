@@ -1,17 +1,15 @@
 apiVersion: batch/v1
 kind: Job
 metadata:
-  name: sitemapper-job
+  name: sleepjob
 spec:
   ttlSecondsAfterFinished: 10
+  backoffLimit: 0
   template:
     spec:
       containers:
-      - image: k3d-sitemapper-registry:40213/sitemapper-job:latest
-        name: sitemapper-job
-        command: ["/sitemapper",  "-s", "https://dinofizzotti.com", "--id", "12345"]
-        envFrom:
-          - configMapRef:
-              name: sitemapper
+      - image: busybox:latest
+        name: sleepjob
+        command: ["/bin/sh", "-c" ,"sleep 10"]
         resources: {}
       restartPolicy: Never

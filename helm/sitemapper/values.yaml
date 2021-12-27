@@ -7,14 +7,14 @@ namespace: sitemapper
 
 crawlmanager:
   image:
-    repository: k3d-sitemapper-registry:40213/crawlmanager
+    repository: 192.168.0.13:5577/crawlmanager
     pullPolicy: IfNotPresent
-    tag: latest
+    tag: armv7
 crawlJob:
   image:
-    repository: k3d-sitemapper-registry:40213/sitemapper-job
+    repository: 192.168.0.13:5577/sitemapper-job
     pullPolicy: IfNotPresent
-    tag: latest
+    tag: armv7
 
 
 image:
@@ -50,9 +50,10 @@ securityContext: {}
   # runAsUser: 1000
 
 nats:
-  server: nats://sitemapper-nats:4222
+  server: nats://nats:4222
   resultsSubject: results
   crawlSubject: crawl
+  startSubject: start
 
 service:
   type: ClusterIP
@@ -93,7 +94,8 @@ autoscaling:
   targetCPUUtilizationPercentage: 80
   # targetMemoryUtilizationPercentage: 80
 
-nodeSelector: {}
+nodeSelector:
+  k3s-role: agent
 
 tolerations: []
 

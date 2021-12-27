@@ -6,8 +6,9 @@ metadata:
     {{- include "sitemapper.labels" . | nindent 4 }}
 data:
   NAMESPACE: {{ .Release.Namespace | quote }}
-  JOB_TTL: "10"
+  JOB_TTL: "0"
   JOB_IMAGE: "{{ .Values.crawlJob.image.repository }}:{{ .Values.crawlJob.image.tag | default .Chart.AppVersion }}"
   NATS_SERVER: {{ .Values.nats.server | quote }}
   NATS_RESULTS_SUBJECT: {{ .Values.nats.resultsSubject | quote }}
   NATS_CRAWL_SUBJECT: {{ .Values.nats.crawlSubject | quote }}
+  NATS_START_SUBJECT: {{ .Values.nats.startSubject | quote }}

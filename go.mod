@@ -3,8 +3,12 @@ module github.com/dinofizz/sitemapper
 go 1.17
 
 require (
+	github.com/NathanBak/easy-cass-go v0.0.0-20210818055205-4b179db8f761
+	github.com/gocql/gocql v0.0.0-20210515062232-b7ef815b4556
+	github.com/google/uuid v1.1.2
 	github.com/matryer/is v1.4.0
 	github.com/nats-io/nats.go v1.13.1-0.20211122170419-d7c1d78a50fc
+	github.com/pkg/errors v0.9.1
 	github.com/spf13/cobra v1.2.1
 	k8s.io/api v0.23.1
 	k8s.io/apimachinery v0.23.1
@@ -16,10 +20,11 @@ require (
 	github.com/go-logr/logr v1.2.0 // indirect
 	github.com/gogo/protobuf v1.3.2 // indirect
 	github.com/golang/protobuf v1.5.2 // indirect
+	github.com/golang/snappy v0.0.3 // indirect
 	github.com/google/go-cmp v0.5.5 // indirect
 	github.com/google/gofuzz v1.1.0 // indirect
 	github.com/googleapis/gnostic v0.5.5 // indirect
-	github.com/imdario/mergo v0.3.5 // indirect
+	github.com/hailocab/go-hostpool v0.0.0-20160125115350-e80d13ce29ed // indirect
 	github.com/inconshreveable/mousetrap v1.0.0 // indirect
 	github.com/json-iterator/go v1.1.12 // indirect
 	github.com/modern-go/concurrent v0.0.0-20180306012644-bacd9c7ef1dd // indirect

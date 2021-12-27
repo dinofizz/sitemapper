@@ -3,6 +3,7 @@ package main
 import (
 	"context"
 	"fmt"
+	"github.com/google/uuid"
 	batchv1 "k8s.io/api/batch/v1"
 	v1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -22,24 +23,7 @@ type JobManager struct {
 }
 
 func NewJobManager() *JobManager {
-	ji := os.Getenv("JOB_IMAGE")
-	if ji == "" {
-		log.Fatalf("Unable to find JOB_IMAGE in env vars")
-	}
-
-	t := os.Getenv("JOB_TTL")
-	if t == "" {
-		log.Fatalf("Unable to find JOB_TTL in env vars")
-	}
-	ttl, err := strconv.ParseInt(t, 10, 32)
-	if err != nil {
-		log.Fatalf("Unable to parse TTL \"%s\" to int", t)
-	}
-
-	ns := os.Getenv("NAMESPACE")
-	if ns == "" {
-		log.Fatalf("Unable to find NAMESPACE in env vars")
-	}
+	ji, ttl, ns := getConfiguration()
 
 	config, err := rest.InClusterConfig()
 	if err != nil {
@@ -60,7 +44,30 @@ func NewJobManager() *JobManager {
 	return jm
 }
 
-func (jm *JobManager) CreateJob(crawlID string, url string) {
+func getConfiguration() (string, int64, string) {
+	ji := os.Getenv("JOB_IMAGE")
+	if ji == "" {
+		log.Fatalf("Unable to find JOB_IMAGE in env vars")
+	}
+
+	t := os.Getenv("JOB_TTL")
+	if t == "" {
+		log.Fatalf("Unable to find JOB_TTL in env vars")
+	}
+	ttl, err := strconv.ParseInt(t, 10, 32)
+	if err != nil {
+		log.Fatalf("Unable to parse TTL \"%s\" to int", t)
+	}
+
+	ns := os.Getenv("NAMESPACE")
+	if ns == "" {
+		log.Fatalf("Unable to find NAMESPACE in env vars")
+	}
+	return ji, ttl, ns
+}
+
+func (jm *JobManager) CreateJob(crawlID uuid.UUID, url string) error {
+	cid := crawlID.String()
 	jobs := jm.clientset.BatchV1().Jobs(jm.namespace)
 	var backOffLimit int32 = 0
 	cmd := fmt.Sprintf("/sitemapper -s %s --id %s", url, crawlID)
@@ -70,7 +77,7 @@ func (jm *JobManager) CreateJob(crawlID string, url string) {
 			Name:      fmt.Sprintf("crawl-job-%s", crawlID),
 			Namespace: jm.namespace,
 			Labels: map[string]string{
-				"crawl-id": crawlID,
+				"crawl-id": cid,
 			},
 		},
 		Spec: batchv1.JobSpec{
@@ -80,15 +87,16 @@ func (jm *JobManager) CreateJob(crawlID string, url string) {
 					Name:      fmt.Sprintf("crawl-pod-%s", crawlID),
 					Namespace: jm.namespace,
 					Labels: map[string]string{
-						"crawl-id": crawlID,
+						"crawl-id": cid,
 					},
 				},
 				Spec: v1.PodSpec{
 					Containers: []v1.Container{
 						{
-							Name:    "sitemapper",
-							Image:   jm.jobImage,
-							Command: strings.Split(cmd, " "),
+							Name:            "sitemapper",
+							Image:           jm.jobImage,
+							ImagePullPolicy: v1.PullAlways,
+							Command:         strings.Split(cmd, " "),
 							EnvFrom: []v1.EnvFromSource{{
 								ConfigMapRef: &v1.ConfigMapEnvSource{
 									LocalObjectReference: v1.LocalObjectReference{
@@ -99,6 +107,9 @@ func (jm *JobManager) CreateJob(crawlID string, url string) {
 						},
 					},
 					RestartPolicy: v1.RestartPolicyNever,
+					NodeSelector: map[string]string{
+						"k3s-role": "agent",
+					},
 				},
 			},
 			BackoffLimit: &backOffLimit,
@@ -108,8 +119,9 @@ func (jm *JobManager) CreateJob(crawlID string, url string) {
 	j, err := jobs.Create(context.TODO(), jobSpec, metav1.CreateOptions{})
 	if err != nil {
 		log.Printf("Failed to create job: %s\n", err)
-		return
+		return err
 	}
 
 	log.Printf("Created job %s successfully", j.Name)
+	return nil
 }

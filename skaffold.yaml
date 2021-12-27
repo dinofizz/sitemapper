@@ -8,6 +8,8 @@ build:
   - image: crawljob
     docker:
       dockerfile: infrastructure/dockerfile-job
+  local:
+    push: true
 deploy:
   helm:
     releases:

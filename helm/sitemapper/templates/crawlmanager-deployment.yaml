@@ -42,10 +42,24 @@ spec:
               command:
                 - stat
                 - /ready/ready.txt
-            initialDelaySeconds: 5
-            periodSeconds: 5
           resources:
             {{- toYaml .Values.resources | nindent 12 }}
+          env:
+            - name: ASTRA_CLIENT_ZIP_PATH
+              valueFrom:
+                secretKeyRef:
+                  key: zipPath
+                  name: astra-auth
+            - name: ASTRA_CLIENT_SECRET
+              valueFrom:
+                secretKeyRef:
+                  name: astra-auth
+                  key: clientSecret
+            - name: ASTRA_CLIENT_ID
+              valueFrom:
+                secretKeyRef:
+                  name: astra-auth
+                  key: clientID
           envFrom:
             - configMapRef:
                 name: sitemapper

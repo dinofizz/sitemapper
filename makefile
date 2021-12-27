@@ -13,7 +13,7 @@ vet: fmt
 .PHONY:vet
 
 build-standalone: vet lint
-	go build -o cm ./sitemapper/cmd/standalone
+	go build -o sm ./sitemapper/cmd/standalone
 .PHONY:build
 
 build-crawlmanager: vet lint

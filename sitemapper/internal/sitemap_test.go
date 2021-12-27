@@ -37,18 +37,27 @@ func TestSiteMap_UpdateUrlWithLinks(t *testing.T) {
 func TestSiteMap_WriteTo(t *testing.T) {
 	sm := NewSiteMap()
 	u := "https://www.example.com"
-	links := []string{"https://link.one/", "https://link.two"}
-	expectedMap := map[string][]string{
-		"https://www.example.com": {
-			"https://link.one/",
-			"https://link.two",
+
+	type expectedStructure []struct {
+		URL   string
+		Links []string
+	}
+
+	expected := expectedStructure{
+		{
+			URL: "https://www.example.com",
+			Links: []string{
+				"https://link.one/",
+				"https://link.two",
+			},
 		},
 	}
+
 	is := is2.New(t)
-	var output map[string][]string
+	var output expectedStructure
 
 	sm.AddURL(u)
-	sm.UpdateURLWithLinks(u, links)
+	sm.UpdateURLWithLinks(u, expected[0].Links)
 	var b bytes.Buffer
 	_, err := sm.WriteTo(&b)
 	if err != nil {
@@ -60,5 +69,5 @@ func TestSiteMap_WriteTo(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	is.Equal(output, expectedMap)
+	is.Equal(output, expected)
 }

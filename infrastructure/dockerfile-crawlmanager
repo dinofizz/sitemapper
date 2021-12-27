@@ -23,11 +23,10 @@ LABEL maintainer="dinofizz"
 RUN mkdir /ready
 
 COPY --from=build /cm /crawlmanager
-
+COPY ./secure-connect-sitemapper.zip /astra/secure-connect-sitemapper.zip
 # copy ca certs
 COPY --from=build /etc/ssl/certs/ca-certificates.crt /etc/ssl/certs/
 
-# add a user here because addgroup and adduser are not available in scratch
 RUN addgroup -S crawlmanager \
     && adduser -S -u 10000 -g crawlmanager crawlmanager
 

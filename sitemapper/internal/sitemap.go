@@ -12,12 +12,18 @@ import (
 // The use of a map ensures that we don't write duplicate entries, and negates the need for searching a slice.
 // TODO: rethink this structure, not sure if I need the values AND the keys.
 type links map[string]string
+type linkmap map[string]links
 
 // A SiteMap is the data structure used to store a list of links found at crawled URLs. A sync.RWMutex provides
 // access control to the internal map.
 type SiteMap struct {
 	mutex   sync.RWMutex
-	sitemap map[string]links
+	sitemap linkmap
+}
+
+type URLLinks struct {
+	URL   string
+	Links links
 }
 
 // NewSiteMap returns an SiteMap instance with an empty sitemap map, ready for URLs and links to be added.
@@ -70,14 +76,30 @@ func (sm *SiteMap) UpdateURLWithLinks(u string, newLinks []string) {
 }
 
 // MarshalJSON is provided to aid the marshalling of the internal map structure for a parent URL to a slice of link strings.
-func (lm links) MarshalJSON() ([]byte, error) {
-	links := make([]string, 0)
-	for _, v := range lm {
-		links = append(links, v)
+func (lm *linkmap) MarshalJSON() ([]byte, error) {
+	var uls []URLLinks
+	for k, v := range *lm {
+		ul := &URLLinks{URL: k, Links: v}
+		uls = append(uls, *ul)
 	}
 
-	sort.Strings(links)
-	j, err := json.Marshal(links)
+	j, err := json.Marshal(uls)
+	if err != nil {
+		return j, err
+	}
+
+	return j, nil
+}
+
+// MarshalJSON is provided to aid the marshalling of the internal map structure for a parent URL to a slice of link strings.
+func (lm links) MarshalJSON() ([]byte, error) {
+	l := make([]string, 0)
+	for _, v := range lm {
+		l = append(l, v)
+	}
+
+	sort.Strings(l)
+	j, err := json.Marshal(l)
 	if err != nil {
 		return j, err
 	}

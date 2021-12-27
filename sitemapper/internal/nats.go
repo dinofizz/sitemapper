@@ -26,8 +26,12 @@ func NewNATSSender() *NATSSender {
 }
 
 func (nw *NATSSender) SendMessage(crawlId string, b bytes.Buffer) error {
-	var results map[string][]string
-	err := json.Unmarshal(b.Bytes(), &results)
+	type results []struct {
+		URL   string
+		Links []string
+	}
+	var rs results
+	err := json.Unmarshal(b.Bytes(), &rs)
 	if err != nil {
 		return err
 	}
@@ -41,13 +45,11 @@ func (nw *NATSSender) SendMessage(crawlId string, b bytes.Buffer) error {
 		log.Fatal(err)
 	}
 	defer ec.Close()
-
 	type resultsMessage struct {
 		CrawlId string
-		Results *map[string][]string
+		Results results
 	}
-
-	if err = ec.Publish(nw.subject, &resultsMessage{CrawlId: crawlId, Results: &results}); err != nil {
+	if err = ec.Publish(nw.subject, &resultsMessage{CrawlId: crawlId, Results: rs}); err != nil {
 		return err
 	}
 	return nil
