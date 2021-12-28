@@ -1,0 +1,10 @@
+apiVersion: v1
+kind: ResourceQuota
+metadata:
+  name: sm-resourcequota
+  namespace: sitemapper
+  labels:
+     {{- include "sitemapper.labels" . | nindent 4 }}
+spec:
+  hard:
+    count/jobs.batch: {{ .Values.resourceQuota.maxJobs | quote }}

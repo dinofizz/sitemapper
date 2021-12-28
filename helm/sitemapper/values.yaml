@@ -16,6 +16,8 @@ crawlJob:
     pullPolicy: IfNotPresent
     tag: armv7
 
+resourceQuota:
+  maxJobs: 20
 
 image:
   repository: nginx

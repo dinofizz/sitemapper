@@ -3,11 +3,13 @@ package main
 import (
 	"github.com/google/uuid"
 	"log"
+	"math/rand"
 	"os"
 	"os/signal"
 	"strings"
 	"sync"
 	"syscall"
+	"time"
 )
 
 type crawlManager struct {
@@ -41,6 +43,7 @@ type results struct {
 
 func main() {
 	log.Println("Starting Crawl Manager")
+	rand.Seed(time.Now().Unix())
 	sigs := make(chan os.Signal, 1)
 	signal.Notify(sigs, syscall.SIGTERM)
 
@@ -95,28 +98,7 @@ func (cm *crawlManager) HandleStartMessage(s *start) {
 		return
 	}
 
-	err = cm.cass.WriteCrawl(crawlID, sitemapID, s.URL, 1, s.MaxDepth, "PENDING")
-	if err != nil {
-		log.Print(err)
-		return
-	}
-
-	err = cm.jm.CreateJob(crawlID, s.URL)
-	if err != nil {
-		if strings.Contains(err.Error(), "exceeded quota") {
-			log.Printf("Too many jobs, re-flighting message for sitemap ID: %s\n", s.SitemapID)
-			err = cm.nm.SendStartMessage(sitemapID, s.URL, s.MaxDepth)
-			if err != nil {
-				log.Print(err)
-			}
-			return
-		} else {
-			log.Print(err)
-			return
-		}
-	}
-
-	err = cm.cass.UpdateStatus(crawlID, sitemapID, "CREATED")
+	err = cm.nm.SendCrawlMessage(crawlID, sitemapID, s.URL, 1)
 	if err != nil {
 		log.Print(err)
 		return
@@ -166,6 +148,7 @@ func (cm *crawlManager) HandleCrawlMessage(c *crawl) {
 		if err != nil {
 			if strings.Contains(err.Error(), "exceeded quota") {
 				log.Printf("Too many jobs, re-flighting message for crawl ID: %s\n", c.ID)
+				time.Sleep(time.Duration(rand.Intn(1000)) * time.Millisecond)
 				err = cm.nm.SendCrawlMessage(crawlID, sitemapID, c.URL, c.Depth)
 				if err != nil {
 					log.Print(err)
