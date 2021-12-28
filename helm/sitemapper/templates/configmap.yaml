@@ -12,3 +12,4 @@ data:
   NATS_RESULTS_SUBJECT: {{ .Values.nats.resultsSubject | quote }}
   NATS_CRAWL_SUBJECT: {{ .Values.nats.crawlSubject | quote }}
   NATS_START_SUBJECT: {{ .Values.nats.startSubject | quote }}
+  API_ADDRESS: "{{ .Values.api.host }}:{{ .Values.api.port }}"

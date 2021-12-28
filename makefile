@@ -17,11 +17,18 @@ build-standalone: vet lint
 .PHONY:build
 
 build-crawlmanager: vet lint
-	go build -o cm ./crawlmanager
-.PHONY:build
+	go build -o cm ./sitemapper/cmd/crawlmanager
+.PHONY:build-crawlmanager
+
+build-api: vet lint
+	go build -o api ./sitemapper/cmd/api
+.PHONY:build-api
 
 docker-crawlmanager: build-crawlmanager
 	docker build -t crawlmanager:latest -f infrastructure/dockerfile-crawlmanager .
+
+docker-api: build-api
+	docker build -t api:latest -f infrastructure/dockerfile-api .
 
 test: build
 	go test -v -cover ./...

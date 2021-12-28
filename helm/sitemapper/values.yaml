@@ -15,6 +15,13 @@ crawlJob:
     repository: 192.168.0.13:5577/sitemapper-job
     pullPolicy: IfNotPresent
     tag: armv7
+api:
+  image:
+    repository: 192.168.0.13:5577/api
+    pullPolicy: IfNotPresent
+    tag: armv7
+  host: 0.0.0.0
+  port: 8080
 
 resourceQuota:
   maxJobs: 20
@@ -51,6 +58,7 @@ securityContext: {}
   # runAsNonRoot: true
   # runAsUser: 1000
 
+
 nats:
   server: nats://nats:4222
   resultsSubject: results
@@ -58,7 +66,7 @@ nats:
   startSubject: start
 
 service:
-  type: ClusterIP
+  type: NodePort
   port: 80
 
 ingress:

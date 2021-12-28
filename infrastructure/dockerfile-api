@@ -14,7 +14,7 @@ RUN go mod download
 COPY ./sitemapper ./sitemapper
 
 # Build the executable
-RUN CGO_ENABLED=0 go build -v -o /cm ./sitemapper/cmd/crawlmanager
+RUN CGO_ENABLED=0 go build -v -o /api ./sitemapper/cmd/api
 
 # STAGE 2: build the container to run
 FROM alpine AS final
@@ -22,15 +22,15 @@ LABEL maintainer="dinofizz"
 
 RUN mkdir /ready
 
-COPY --from=build /cm /crawlmanager
+COPY --from=build /api /api
 COPY ./secure-connect-sitemapper.zip /astra/secure-connect-sitemapper.zip
 # copy ca certs
 COPY --from=build /etc/ssl/certs/ca-certificates.crt /etc/ssl/certs/
 
-RUN addgroup -S crawlmanager \
-    && adduser -S -u 10000 -g crawlmanager crawlmanager
+RUN addgroup -S  api \
+    && adduser -S -u 10000 -g api api
 
-RUN chown -R crawlmanager:crawlmanager /ready
-USER crawlmanager
+RUN chown -R api:api /ready
+USER api
 
-ENTRYPOINT ["/crawlmanager"]
+ENTRYPOINT ["/api"]

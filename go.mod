@@ -6,6 +6,7 @@ require (
 	github.com/NathanBak/easy-cass-go v0.0.0-20210818055205-4b179db8f761
 	github.com/gocql/gocql v0.0.0-20210515062232-b7ef815b4556
 	github.com/google/uuid v1.1.2
+	github.com/gorilla/mux v1.8.0
 	github.com/matryer/is v1.4.0
 	github.com/nats-io/nats.go v1.13.1-0.20211122170419-d7c1d78a50fc
 	github.com/pkg/errors v0.9.1

@@ -2,8 +2,10 @@ package main
 
 import (
 	"bytes"
+	"encoding/json"
 	"fmt"
 	"github.com/dinofizz/sitemapper/sitemapper/internal"
+	"github.com/google/uuid"
 	"github.com/spf13/cobra"
 	"log"
 	"os"
@@ -32,6 +34,8 @@ var rootCmd = &cobra.Command{
 	Short: "Crawls from a start URL and writes a JSON based sitemap to a NATS topic",
 	RunE: func(cmd *cobra.Command, args []string) error {
 		startUrl := strings.ToLower(site)
+		ns := sitemap.NewNATSManager()
+		defer ns.Stop()
 		sm := sitemap.NewSiteMap()
 		c := sitemap.NewSynchronousCrawlEngine(sm, 1, startUrl)
 		log.Printf("Crawling %s", site)
@@ -46,8 +50,19 @@ var rootCmd = &cobra.Command{
 			return err
 		}
 
-		ns := sitemap.NewNATSSender()
-		return ns.SendMessage(id, b)
+		var results []sitemap.Result
+		err = json.Unmarshal(b.Bytes(), &results)
+		if err != nil {
+			return err
+		}
+		log.Println(len(results))
+
+		crawlID := uuid.MustParse(id)
+		err = ns.SendResultsMessage(crawlID, &results)
+		if err != nil {
+			return err
+		}
+		return nil
 	},
 }
 

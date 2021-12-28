@@ -1,4 +1,4 @@
-package main
+package sitemap
 
 import (
 	"github.com/NathanBak/easy-cass-go/pkg/easycass"
@@ -10,7 +10,7 @@ import (
 	"strings"
 )
 
-type cass struct {
+type Cass struct {
 	session *gocql.Session
 }
 
@@ -30,18 +30,28 @@ func getAstraCreds() (string, string, string) {
 	return id, secret, zip
 }
 
-func NewCass() *cass {
+func NewCass() *Cass {
 	log.Println("Connecting to AstraDB")
 	id, secret, zipPath := getAstraCreds()
 	session, err := easycass.GetSession(id, secret, zipPath)
+	session.Closed()
 	if err != nil {
 		log.Fatal(err)
 	}
 	log.Println(easycass.GetKeyspace(session))
-	return &cass{session: session}
+	return &Cass{session: session}
 }
 
-func (c *cass) WriteCrawl(crawlID, sitemapID uuid.UUID, url string, depth, maxDepth int, status string) error {
+func (c *Cass) HealthCheck() error {
+	var count int
+	err := c.session.Query("SELECT COUNT(*) FROM sitemaps").Scan(&count)
+	if err != nil {
+		return err
+	}
+	return nil
+}
+
+func (c *Cass) WriteCrawl(crawlID, sitemapID uuid.UUID, url string, depth, maxDepth int, status string) error {
 	cUUID, err := gocql.ParseUUID(crawlID.String())
 	if err != nil {
 		return err
@@ -74,7 +84,7 @@ func (c *cass) WriteCrawl(crawlID, sitemapID uuid.UUID, url string, depth, maxDe
 	return nil
 }
 
-func (c *cass) UpdateStatus(crawlID, sitemapID uuid.UUID, status string) error {
+func (c *Cass) UpdateStatus(crawlID, sitemapID uuid.UUID, status string) error {
 	cUUID, err := gocql.ParseUUID(crawlID.String())
 	if err != nil {
 		return err
@@ -90,7 +100,7 @@ func (c *cass) UpdateStatus(crawlID, sitemapID uuid.UUID, status string) error {
 	return nil
 }
 
-func (c *cass) WriteSitemap(sitemapID string, url string, maxDepth int) error {
+func (c *Cass) WriteSitemap(sitemapID string, url string, maxDepth int) error {
 	smUUID, err := gocql.ParseUUID(sitemapID)
 	if err != nil {
 		return err
@@ -113,33 +123,33 @@ func (c *cass) WriteSitemap(sitemapID string, url string, maxDepth int) error {
 }
 
 type crawlJob struct {
-	crawlID   uuid.UUID
-	sitemapID uuid.UUID
-	depth     int
-	maxDepth  int
+	CrawlID   uuid.UUID
+	SitemapID uuid.UUID
+	Depth     int
+	MaxDepth  int
 }
 
-func (c *cass) GetSitemapIDForCrawlID(crawlID uuid.UUID) (*crawlJob, error) {
+func (c *Cass) GetSitemapIDForCrawlID(crawlID uuid.UUID) (*crawlJob, error) {
 	cUUID, err := gocql.ParseUUID(crawlID.String())
 	if err != nil {
 		return nil, err
 	}
 
-	cj := &crawlJob{crawlID: crawlID}
+	cj := &crawlJob{CrawlID: crawlID}
 	var smUUID gocql.UUID
 
-	err = c.session.Query("SELECT sitemap_id, depth, max_depth FROM crawl_jobs WHERE crawl_id = ?", cUUID).Scan(&smUUID, &(cj.depth), &(cj.maxDepth))
+	err = c.session.Query("SELECT sitemap_id, depth, max_depth FROM crawl_jobs WHERE crawl_id = ?", cUUID).Scan(&smUUID, &(cj.Depth), &(cj.MaxDepth))
 	if err != nil {
 		return nil, errors.Wrapf(err, "Error checking for sitemap ID using crawl ID %s", crawlID)
 	}
 
 	sitemapID := uuid.MustParse(smUUID.String())
-	cj.sitemapID = sitemapID
+	cj.SitemapID = sitemapID
 
 	return cj, nil
 }
 
-func (c *cass) GetMaxDepthForSitemapID(sitemapID uuid.UUID) (int, error) {
+func (c *Cass) GetMaxDepthForSitemapID(sitemapID uuid.UUID) (int, error) {
 	smUUID, err := gocql.ParseUUID(sitemapID.String())
 	if err != nil {
 		return -1, err
@@ -154,7 +164,7 @@ func (c *cass) GetMaxDepthForSitemapID(sitemapID uuid.UUID) (int, error) {
 	return maxDepth, nil
 }
 
-func (c *cass) URLExistsForSitemapID(sitemapID uuid.UUID, URL string) (bool, error) {
+func (c *Cass) URLExistsForSitemapID(sitemapID uuid.UUID, URL string) (bool, error) {
 	smUUID, err := gocql.ParseUUID(sitemapID.String())
 	if err != nil {
 		return false, err
@@ -173,7 +183,7 @@ func (c *cass) URLExistsForSitemapID(sitemapID uuid.UUID, URL string) (bool, err
 	return true, nil
 }
 
-func (c *cass) WriteResults(sitemapID, crawlID uuid.UUID, URL string, links []string) error {
+func (c *Cass) WriteResults(sitemapID, crawlID uuid.UUID, URL string, links []string) error {
 	smUUID, err := gocql.ParseUUID(sitemapID.String())
 	if err != nil {
 		return err
