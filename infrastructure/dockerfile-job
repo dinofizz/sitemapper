@@ -16,12 +16,12 @@ RUN go mod download
 COPY ./sitemapper ./sitemapper
 
 # Build the executable
-RUN CGO_ENABLED=0 go build -v -o /sitemapper ./sitemapper/cmd/job
+RUN CGO_ENABLED=0 go build -v -o /sm ./sitemapper/cmd/job
 
 # STAGE 2: build the container to run
 FROM scratch AS final
 LABEL maintainer="dinofizz"
-COPY --from=build /sitemapper /sitemapper
+COPY --from=build /sm /sitemapper
 
 # copy ca certs
 COPY --from=build /etc/ssl/certs/ca-certificates.crt /etc/ssl/certs/
