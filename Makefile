@@ -21,11 +21,11 @@ build-crawlmanager: vet lint
 .PHONY:build-crawlmanager
 
 docker-crawlmanager: build-crawlmanager
-	docker build -t crawlmanager:latest -f infrastructure/dockerfile-crawlmanager .
+	docker build -t crawlmanager:latest -f dockerfiles/dockerfile-crawlmanager .
 .PHONY:docker-crawlmanager
 
 docker-crawlmanager-armv7: build-crawlmanager
-	docker buildx build -t 192.168.0.13:5577/crawlmanager:armv7 --platform=linux/arm/v7 -f infrastructure/dockerfile-crawlmanager --allow security.insecure --push --output=type=image,push=true,registry.insecure=true .
+	docker buildx build -t 192.168.0.13:5577/crawlmanager:armv7 --platform=linux/arm/v7 -f dockerfiles/dockerfile-crawlmanager --allow security.insecure --push --output=type=image,push=true,registry.insecure=true .
 .PHONY:docker-crawlmanager-armv7
 
 build-api: vet lint
@@ -33,11 +33,11 @@ build-api: vet lint
 .PHONY:build-api
 
 docker-api: build-api
-	docker build -t api:latest -f infrastructure/dockerfile-api .
+	docker build -t api:latest -f dockerfiles/dockerfile-api .
 .PHONY:docker-api
 
 docker-api-armv7: build-api
-	docker buildx build -t 192.168.0.13:5577/api:armv7 --platform=linux/arm/v7 -f infrastructure/dockerfile-api --allow security.insecure --push --output=type=image,push=true,registry.insecure=true .
+	docker buildx build -t 192.168.0.13:5577/api:armv7 --platform=linux/arm/v7 -f dockerfiles/dockerfile-api --allow security.insecure --push --output=type=image,push=true,registry.insecure=true .
 .PHONY:docker-api-armv7
 
 build-job: vet lint
@@ -45,11 +45,11 @@ build-job: vet lint
 .PHONY:build-job
 
 docker-job: build-job
-	docker build -t sitemapper-job:latest -f infrastructure/dockerfile-job .
+	docker build -t sitemapper-job:latest -f dockerfiles/dockerfile-job .
 .PHONY:docker-job
 
 docker-job-armv7: build-job
-	docker buildx build -t 192.168.0.13:5577/sitemapper-job:armv7 --platform=linux/arm/v7 -f infrastructure/dockerfile-job --allow security.insecure --push --output=type=image,push=true,registry.insecure=true .
+	docker buildx build -t 192.168.0.13:5577/sitemapper-job:armv7 --platform=linux/arm/v7 -f dockerfiles/dockerfile-job --allow security.insecure --push --output=type=image,push=true,registry.insecure=true .
 .PHONY:docker-job-armv7
 
 test: build

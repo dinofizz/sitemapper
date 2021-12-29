@@ -42,7 +42,7 @@ func (cm *CrawlManager) HandleStartMessage(s *StartMessage) {
 
 func (cm *CrawlManager) HandleCrawlMessage(c *CrawlMessage) {
 	log.Printf("[Crawl] %v", *c)
-	crawlID, err := uuid.Parse(c.ID)
+	crawlID, err := uuid.Parse(c.CrawlID)
 	if err != nil {
 		log.Print(err)
 		return
@@ -60,7 +60,7 @@ func (cm *CrawlManager) HandleCrawlMessage(c *CrawlMessage) {
 		return
 	}
 
-	if c.Depth <= md {
+	if c.CurrentDepth <= md {
 
 		exists, err := cm.CassDB.URLExistsForSitemapID(sitemapID, c.URL)
 		if err != nil {
@@ -73,7 +73,7 @@ func (cm *CrawlManager) HandleCrawlMessage(c *CrawlMessage) {
 			return
 		}
 
-		err = cm.CassDB.WriteCrawl(crawlID, sitemapID, c.URL, c.Depth, md, "PENDING")
+		err = cm.CassDB.WriteCrawl(crawlID, sitemapID, c.URL, c.CurrentDepth, md, "PENDING")
 		if err != nil {
 			log.Print(err)
 			return
@@ -82,9 +82,9 @@ func (cm *CrawlManager) HandleCrawlMessage(c *CrawlMessage) {
 		err = cm.JobManager.CreateJob(crawlID, c.URL)
 		if err != nil {
 			if strings.Contains(err.Error(), "exceeded quota") {
-				log.Printf("Too many jobs, re-flighting message for crawl ID: %s\n", c.ID)
+				log.Printf("Too many jobs, re-flighting message for crawl ID: %s\n", c.CrawlID)
 				time.Sleep(time.Duration(rand.Intn(1000)) * time.Millisecond)
-				err = cm.NatsManager.SendCrawlMessage(crawlID, sitemapID, c.URL, c.Depth)
+				err = cm.NatsManager.SendCrawlMessage(crawlID, sitemapID, c.URL, c.CurrentDepth)
 				if err != nil {
 					log.Print(err)
 				}
@@ -137,6 +137,11 @@ func (cm *CrawlManager) HandleResultsMessage(r *ResultsMessage) {
 					return
 				}
 			}
+		}
+		err = cm.CassDB.UpdateStatus(crawlID, cj.SitemapID, "COMPLETE")
+		if err != nil {
+			log.Print(err)
+			return
 		}
 	}
 

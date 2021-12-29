@@ -1,26 +1,29 @@
-# sitemapper
+# sitemapper (Standalone)
 
 sitemapper is a site mapping tool which provides a JSON output detailing each page visited, each with a list of links that are related to the root URL. The depth to which sitemapper will explore a site is configurable, as well as the mode of operation: "synchronous", "concurrent" and "concurrent limited".
 
 Example:
 
 ```shell
-$ ./sitemapper -s https://www.google.com | jq
-2021/12/05 16:26:26 Crawling https://www.google.com with depth 1
-2021/12/05 16:26:26 visiting URL https://www.google.com at depth 0 with parent https://www.google.com
-2021/12/05 16:26:26 Elapsed milliseconds:  123
-{
-  "https://www.google.com": [
-    "https://www.google.com/advanced_search",
-    "https://www.google.com/intl/en/about.html",
-    "https://www.google.com/intl/en/ads/",
-    "https://www.google.com/intl/en/policies/privacy/",
-    "https://www.google.com/intl/en/policies/terms/",
-    "https://www.google.com/preferences",
-    "https://www.google.com/services/",
-    "https://www.google.com/setprefdomain"
-  ]
-}
+$ ./sm -s https://www.google.com | jq
+2021/12/28 17:21:39 Crawling https://www.google.com with depth 1
+2021/12/28 17:21:39 visiting URL https://www.google.com at depth 0 with parent https://www.google.com
+2021/12/28 17:21:39 Elapsed milliseconds:  200
+[
+  {
+    "URL": "https://www.google.com",
+    "Links": [
+      "https://www.google.com/advanced_search",
+      "https://www.google.com/intl/en/about.html",
+      "https://www.google.com/intl/en/ads/",
+      "https://www.google.com/intl/en/policies/privacy/",
+      "https://www.google.com/intl/en/policies/terms/",
+      "https://www.google.com/preferences",
+      "https://www.google.com/services/",
+      "https://www.google.com/setprefdomain"
+    ]
+  }
+]
 ```
 *Note: the above example pipes the output of sitemapper into an additional JSON formatting tool, "[jq](https://stedolan.github.io/jq/)".*
 
@@ -69,7 +72,7 @@ The output of sitemapper is JSON written to stdout. [sitemap.go](sitemapper/inte
 A makefile is included to facilitate build and test activities. To build the project run:
 
 ```shell
-make build
+make build-standalone
 ```
 
 ## Test
@@ -85,11 +88,11 @@ Note that the above command will run tests with code coverage enabled.
 ## Usage
 
 ```shell
-$ ./sitemapper -h                                                                                                                                                                                                                                                                                 *[main]
+$ ./sm -h                                                                                                                                                                                                                                                                                 *[main]
 Crawls from a start URL and writes a JSON based sitemap to stdout
 
 Usage:
-  sitemapper [flags]
+  sm [flags]
 
 Flags:
   -d, --depth int     Specify crawl depth (default 1)

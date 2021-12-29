@@ -201,3 +201,53 @@ func (c *Cass) WriteResults(sitemapID, crawlID uuid.UUID, URL string, links []st
 	}
 	return nil
 }
+
+type Details struct {
+	SitemapID string
+	URL       string
+	MaxDepth  int
+}
+
+func (c *Cass) GetSitemapDetails(sitemapID uuid.UUID) (*Details, error) {
+	smUUID, err := gocql.ParseUUID(sitemapID.String())
+	if err != nil {
+		return nil, err
+	}
+
+	var smDetails Details
+	err = c.session.Query("SELECT url, max_depth FROM sitemaps where sitemap_id = ?", smUUID).Scan(&smDetails.URL, &smDetails.MaxDepth)
+	if err != nil {
+		return nil, err
+	}
+
+	smDetails.SitemapID = sitemapID.String()
+
+	return &smDetails, nil
+}
+
+func (c *Cass) GetSitemapResults(sitemapID uuid.UUID) (*[]Result, error) {
+	smUUID, err := gocql.ParseUUID(sitemapID.String())
+	if err != nil {
+		return nil, err
+	}
+	scanner := c.session.Query("SELECT url, links FROM results_by_sitemap_id WHERE sitemap_id = ?", smUUID).Iter().Scanner()
+
+	var results []Result
+
+	for scanner.Next() {
+		var URL string
+		var URLlinks []string
+
+		err = scanner.Scan(&URL, &URLlinks)
+		if err != nil {
+			return nil, err
+		}
+		results = append(results, Result{URL: URL, Links: URLlinks})
+	}
+
+	if err = scanner.Err(); err != nil {
+		return nil, err
+	}
+
+	return &results, nil
+}

@@ -12,10 +12,10 @@ type ResultsMessageHandlerFunc func(c *ResultsMessage)
 type StartMessageHandlerFunc func(c *StartMessage)
 
 type CrawlMessage struct {
-	ID        string
-	SitemapID string
-	URL       string
-	Depth     int
+	CrawlID      string
+	SitemapID    string
+	URL          string
+	CurrentDepth int
 }
 
 type StartMessage struct {
@@ -113,7 +113,7 @@ func (n *NATS) Stop() {
 }
 
 func (n *NATS) SendCrawlMessage(crawlID, sitemapID uuid.UUID, URL string, depth int) error {
-	if err := n.encodedConn.Publish(n.crawlSubject, &CrawlMessage{ID: crawlID.String(), URL: URL, Depth: depth, SitemapID: sitemapID.String()}); err != nil {
+	if err := n.encodedConn.Publish(n.crawlSubject, &CrawlMessage{CrawlID: crawlID.String(), URL: URL, CurrentDepth: depth, SitemapID: sitemapID.String()}); err != nil {
 		return err
 	}
 	return nil

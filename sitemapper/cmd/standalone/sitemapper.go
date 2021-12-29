@@ -28,7 +28,7 @@ func init() {
 }
 
 var rootCmd = &cobra.Command{
-	Use:   "sitemapper",
+	Use:   "sm",
 	Short: "Crawls from a start URL and writes a JSON based sitemap to stdout",
 	RunE: func(cmd *cobra.Command, args []string) error {
 		startUrl := strings.ToLower(site)

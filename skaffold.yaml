@@ -4,13 +4,13 @@ build:
   artifacts:
   - image: crawlmanager
     docker:
-      dockerfile: infrastructure/dockerfile-crawlmanager
+      dockerfile: dockerfiles/dockerfile-crawlmanager
   - image: crawljob
     docker:
-      dockerfile: infrastructure/dockerfile-job
+      dockerfile: dockerfiles/dockerfile-job
   - image: api
     docker:
-      dockerfile: infrastructure/dockerfile-api
+      dockerfile: dockerfiles/dockerfile-api
   local:
     push: true
 deploy:

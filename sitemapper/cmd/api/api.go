@@ -71,7 +71,43 @@ func (a *API) getSitemapResults(w http.ResponseWriter, r *http.Request) {
 	sid := vars["id"]
 	if sid == "" {
 		respondWithError(w, http.StatusBadRequest, "No sitemap ID in path")
+		return
 	}
+
+	sitemapID, err := uuid.Parse(sid)
+	if err != nil {
+		respondWithError(w, http.StatusBadRequest, "Sitemap ID invalid")
+		return
+	}
+
+	smDetails, err := a.CassDB.GetSitemapDetails(sitemapID)
+	if err != nil {
+		respondWithError(w, http.StatusInternalServerError, err.Error())
+		return
+	}
+
+	results, err := a.CassDB.GetSitemapResults(sitemapID)
+	if err != nil {
+		respondWithError(w, http.StatusInternalServerError, err.Error())
+		return
+	}
+
+	response := struct {
+		SitemapID string
+		MaxDepth  int
+		URL       string
+		Results   *[]sitemap.Result
+	}{
+		SitemapID: smDetails.SitemapID,
+		URL:       smDetails.URL,
+		MaxDepth:  smDetails.MaxDepth,
+		Results:   results,
+	}
+
+	response.SitemapID = smDetails.SitemapID
+
+	respondWithJSON(w, http.StatusOK, response)
+
 }
 
 func main() {
@@ -91,6 +127,7 @@ func main() {
 
 	log.Fatal(srv.ListenAndServe())
 }
+
 func respondWithError(w http.ResponseWriter, code int, message string) {
 	respondWithJSON(w, code, map[string]string{"error": message})
 }
