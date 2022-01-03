@@ -34,13 +34,13 @@ An "api" deployment exists which exposes a simple REST API for sitemap creation 
 
 ## Notes on Kubernetes Deployment
 
-I'm using [Skaffold](TODO) and [Helm](TODO) for deployment to two different Kubernetes clusters:
+I'm using [Skaffold](https://skaffold.dev/) and [Helm](https://helm.sh/) for deployment to two different Kubernetes clusters:
 
-* localhost cluster using [k3d](TODO)
-* Raspberry Pi cluster using [k3s](TODO)
-    * See my previous blog post on how I originally set this up [here](TODO)
+* localhost cluster using [k3d](https://k3d.io/)
+* Raspberry Pi cluster using [k3s](https://k3s.io/)
+  * See my previous blog post on how I originally set this up [here](https://www.dinofizzotti.com/blog/2020-05-09-raspberry-pi-cluster-part-2-todo-api-running-on-kubernetes-with-k3s/)
 
-My [skaffold.yaml](TODO) contains a profile for each of the clusters above. For the Pi cluster I use Docker's [buildx](TODO) tool to build ARM images. I push the images to a local Docker registry instance I keep running in my home server.
+My [skaffold.yaml](./skaffold.yaml) contains a profile for each of the clusters above. For the Pi cluster I use Docker's [buildx](https://docs.docker.com/buildx/working-with-buildx/) tool to build ARM images. I push the images to a local Docker registry instance I keep running in my home server.
 
 Here is how I deploy to k3d:
 
@@ -56,7 +56,7 @@ The pods will only run on a node labelled with `k3s-role: agent`.
 
 ## AstraDB
 
-The AstraDB client ID, client secret and path to ZIP file are read from environment variables sourced from a Kubernetes [secret](todo):
+The AstraDB client ID, client secret and path to ZIP file are read from environment variables sourced from a Kubernetes [secret](https://kubernetes.io/docs/concepts/configuration/secret/):
 
 ```shell
 kubectl create secret generic astra-auth \
