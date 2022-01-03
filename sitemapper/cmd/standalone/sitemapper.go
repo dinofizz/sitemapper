@@ -33,8 +33,7 @@ var rootCmd = &cobra.Command{
 	RunE: func(cmd *cobra.Command, args []string) error {
 		startUrl := strings.ToLower(site)
 		sm := sitemap.NewSiteMap()
-		var c sitemap.CrawlEngine
-		c = sitemap.NewConcurrentCrawlEngine(sm, depth, startUrl)
+		var c sitemap.CrawlEngine = sitemap.NewConcurrentCrawlEngine(sm, depth, startUrl)
 		if mode != "" {
 			switch mode {
 			case "concurrent": // default mode if none specified
@@ -50,6 +49,7 @@ var rootCmd = &cobra.Command{
 				return errors.New("unsupported mode")
 			}
 		}
+		log.Printf("Using mode: %s\n", mode)
 
 		log.Printf("Crawling %s with depth %d", site, depth)
 		start := time.Now()

@@ -1,0 +1,15 @@
+@startuml
+start
+#paleturquoise:results message received on NATS **results** subject;
+#thistle:get sitemap ID for crawl ID from DB;
+repeat
+  #thistle:save results to DB;
+  repeat
+    #paleturquoise:send crawl message to NATS **crawl** subject for result link URL;
+  repeat while (more link URLs for crawl URL) is (yes)
+  -> no;
+repeat while (more result URLs) is (yes)
+-> no;
+#thistle:update crawl job in DB with status COMPLETE;
+stop
+@enduml

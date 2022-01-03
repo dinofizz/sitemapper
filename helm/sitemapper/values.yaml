@@ -7,19 +7,19 @@ namespace: sitemapper
 
 crawlmanager:
   image:
-    repository: 192.168.0.13:5577/crawlmanager
+    repository: crawlmanager
     pullPolicy: IfNotPresent
-    tag: armv7
+    tag: latest
 crawlJob:
   image:
-    repository: 192.168.0.13:5577/sitemapper-job
+    repository: sitemapper-job
     pullPolicy: IfNotPresent
-    tag: armv7
+    tag: latest
 api:
   image:
-    repository: 192.168.0.13:5577/api
+    repository: api
     pullPolicy: IfNotPresent
-    tag: armv7
+    tag: latest
   host: 0.0.0.0
   port: 8080
 

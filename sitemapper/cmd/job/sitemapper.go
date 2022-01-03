@@ -37,7 +37,7 @@ var rootCmd = &cobra.Command{
 		ns := sitemap.NewNATSManager()
 		defer ns.Stop()
 		sm := sitemap.NewSiteMap()
-		c := sitemap.NewSynchronousCrawlEngine(sm, 1, startUrl)
+		c := sitemap.NewConcurrentCrawlEngine(sm, 1, startUrl)
 		log.Printf("Crawling %s", site)
 		start := time.Now()
 		c.Run()

@@ -52,12 +52,26 @@ docker-job-armv7: build-job
 	docker buildx build -t 192.168.0.13:5577/sitemapper-job:armv7 --platform=linux/arm/v7 -f dockerfiles/dockerfile-job --allow security.insecure --push --output=type=image,push=true,registry.insecure=true .
 .PHONY:docker-job-armv7
 
+skaffold-build-k3d:
+	skaffold build --default-repo 192.168.0.13:5577 --insecure-registry 192.168.0.13:5577 -p k3d
+
+skaffold-build-picluster:
+	skaffold build --default-repo 192.168.0.13:5577 --insecure-registry 192.168.0.13:5577 -p picluster
+
+skaffold-run-k3d:
+	skaffold run --default-repo 192.168.0.13:5577 --insecure-registry 192.168.0.13:5577 -p k3d
+
+skaffold-run-picluster:
+	skaffold run --default-repo 192.168.0.13:5577 --insecure-registry 192.168.0.13:5577 -p picluster
+
 test: build
 	go test -v -cover ./...
 .PHONY:test
 
 startsite:
 	caddy start ./sitemapper/testsite/
+.PHONY:startsite
 
 stopsite:
 	caddy stop ./sitemapper/testsite/
+.PHONY:stopsite

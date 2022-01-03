@@ -14,7 +14,7 @@ import (
 type API struct {
 	router *mux.Router
 	nats   *sitemap.NATS
-	CassDB *sitemap.Cass
+	CassDB *sitemap.AstraDB
 }
 
 func (a *API) initRoutes() {
@@ -26,7 +26,7 @@ func (a *API) initRoutes() {
 
 func (a *API) health(w http.ResponseWriter, r *http.Request) {
 	if err := a.CassDB.HealthCheck(); err != nil {
-		respondWithError(w, http.StatusInternalServerError, "Error occurred.")
+		respondWithError(w, http.StatusInternalServerError, "Error occurred")
 	}
 	w.WriteHeader(http.StatusNoContent)
 }
@@ -113,7 +113,7 @@ func (a *API) getSitemapResults(w http.ResponseWriter, r *http.Request) {
 func main() {
 	router := mux.NewRouter()
 	nm := sitemap.NewNATSManager()
-	app := &API{CassDB: sitemap.NewCass(), router: router, nats: nm}
+	app := &API{CassDB: sitemap.NewAstraDB(), router: router, nats: nm}
 	app.initRoutes()
 
 	address := os.Getenv("API_ADDRESS")

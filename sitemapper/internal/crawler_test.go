@@ -218,6 +218,7 @@ func Test_cleanLinks(t *testing.T) {
 				"https://anotherhost.com/link.html",
 				"mailto://test@email.com",
 				"https://example.com/index.html#anchor",
+				"https://myexample.com/foo.html",
 			},
 			[]string{
 				"https://www.example.com/parent/relative/link/index.html",

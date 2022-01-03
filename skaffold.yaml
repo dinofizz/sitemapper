@@ -1,18 +1,47 @@
 apiVersion: skaffold/v2beta26
 kind: Config
-build:
-  artifacts:
-  - image: crawlmanager
-    docker:
-      dockerfile: dockerfiles/dockerfile-crawlmanager
-  - image: crawljob
-    docker:
-      dockerfile: dockerfiles/dockerfile-job
-  - image: api
-    docker:
-      dockerfile: dockerfiles/dockerfile-api
-  local:
-    push: true
+profiles:
+- name: picluster
+  deploy:
+    kubeContext: picluster
+  build:
+    artifacts:
+    - image: crawlmanager
+      custom:
+        buildCommand: ./cm-armv7build.sh
+        dependencies:
+          paths:
+          - .
+    - image: api
+      custom:
+        buildCommand: ./api-armv7build.sh
+        dependencies:
+          paths:
+          - .
+    - image: crawljob
+      custom:
+        buildCommand: ./job-armv7build.sh
+        dependencies:
+          paths:
+          - .
+    local:
+      push: true
+- name: k3d
+  deploy:
+    kubeContext: k3d-dcluster
+  build:
+    artifacts:
+    - image: crawlmanager
+      docker:
+        dockerfile: dockerfiles/dockerfile-crawlmanager
+    - image: crawljob
+      docker:
+        dockerfile: dockerfiles/dockerfile-job
+    - image: api
+      docker:
+        dockerfile: dockerfiles/dockerfile-api
+    local:
+      push: true
 deploy:
   helm:
     releases:

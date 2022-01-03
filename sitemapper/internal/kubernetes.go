@@ -95,7 +95,7 @@ func (jm *JobManager) CreateJob(crawlID uuid.UUID, url string) error {
 						{
 							Name:            "sitemapper",
 							Image:           jm.jobImage,
-							ImagePullPolicy: v1.PullAlways,
+							ImagePullPolicy: v1.PullIfNotPresent,
 							Command:         strings.Split(cmd, " "),
 							EnvFrom: []v1.EnvFromSource{{
 								ConfigMapRef: &v1.ConfigMapEnvSource{

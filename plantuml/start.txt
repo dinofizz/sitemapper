@@ -1,0 +1,7 @@
+@startuml
+start
+#paleturquoise:start message received on NATS **start** subject;
+#thistle:save sitemap parameters to DB;
+#paleturquoise:send crawl message to NATS **crawl** subject;
+stop
+@enduml

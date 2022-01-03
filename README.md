@@ -1,18 +1,25 @@
-# sitemapper (Standalone)
+# sitemapper
 
 sitemapper is a site mapping tool which provides a JSON output detailing each page visited, each with a list of links that are related to the root URL. The depth to which sitemapper will explore a site is configurable, as well as the mode of operation: "synchronous", "concurrent" and "concurrent limited".
+
+This README details the "standalone" CLI tool implementation. This repo also contains code related to running sitemapper as a Kubernetes-based distributed crawler. See [README-k8s.md](./README-k8s.md),
 
 Example:
 
 ```shell
-$ ./sm -s https://www.google.com | jq
-2021/12/28 17:21:39 Crawling https://www.google.com with depth 1
-2021/12/28 17:21:39 visiting URL https://www.google.com at depth 0 with parent https://www.google.com
-2021/12/28 17:21:39 Elapsed milliseconds:  200
+2022/01/03 12:20:53 Using mode: concurrent
+2022/01/03 12:20:53 Crawling https://google.com with depth 1
+2022/01/03 12:20:53 visiting URL https://google.com at depth 0 with parent https://google.com
+2022/01/03 12:20:53 Elapsed milliseconds:  312
 [
   {
-    "URL": "https://www.google.com",
+    "URL": "https://google.com",
     "Links": [
+      "https://accounts.google.com/ServiceLogin",
+      "https://drive.google.com/",
+      "https://mail.google.com/mail/",
+      "https://news.google.com/",
+      "https://play.google.com/",
       "https://www.google.com/advanced_search",
       "https://www.google.com/intl/en/about.html",
       "https://www.google.com/intl/en/ads/",
@@ -108,17 +115,17 @@ Flags:
 #### Concurrent crawl of https://dinofizzotti.com with depth 1
 
 ```shell
-./sitemapper -s https://dinofizzotti.com
+./sm -s https://dinofizzotti.com
 ```
 
 #### Synchronous crawl of https://dinofizzotti.com with depth 3
 
 ```shell
-./sitemapper -s https://dinofizzotti.com -d 3 --mode synchronous
+./sm -s https://dinofizzotti.com -d 3 --mode synchronous
 ```
 
 #### Concurrent Limited crawl of https://dinofizzotti.com with depth 3 and concurrency limit 5
 
 ```shell
-./sitemapper -s https://dinofizzotti.com -d 3 --mode limited -l 5
+./sm -s https://dinofizzotti.com -d 3 --mode limited -l 5
 ```

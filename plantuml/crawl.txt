@@ -1,0 +1,16 @@
+@startuml
+start
+#paleturquoise:crawl message received on NATS **crawl** subject;
+#thistle:get max depth for sitemap from DB;
+if (current depth <= max depth) then (yes)
+  #thistle:check if URL already exists in results table in DB;
+  if ( URL exists ) then (no)
+    #thistle:save crawl job details to DB with status PENDING;
+    #orange:create Kubernetes Job pod with crawl details;
+    #thistle:update crawl job in DB with status CREATED;
+  else (yes)
+  endif
+else (no)
+endif
+stop
+@enduml

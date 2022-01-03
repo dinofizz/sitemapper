@@ -10,7 +10,7 @@ import (
 
 type CrawlManager struct {
 	JobManager  *JobManager
-	CassDB      *Cass
+	CassDB      *AstraDB
 	NatsManager *NATS
 }
 

@@ -18,7 +18,7 @@ func main() {
 	signal.Notify(sigs, syscall.SIGTERM)
 
 	jm := sitemap.NewJobManager()
-	cass := sitemap.NewCass()
+	cass := sitemap.NewAstraDB()
 	cm := &sitemap.CrawlManager{JobManager: jm, CassDB: cass}
 	nm := sitemap.NewNATSManager()
 	cm.NatsManager = nm

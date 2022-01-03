@@ -10,11 +10,11 @@ import (
 	"strings"
 )
 
-type Cass struct {
+type AstraDB struct {
 	session *gocql.Session
 }
 
-func getAstraCreds() (string, string, string) {
+func getAstraDBCreds() (string, string, string) {
 	id := os.Getenv("ASTRA_CLIENT_ID")
 	if id == "" {
 		log.Fatalf("Unable to find ASTRA_CLIENT_ID in env vars")
@@ -30,19 +30,19 @@ func getAstraCreds() (string, string, string) {
 	return id, secret, zip
 }
 
-func NewCass() *Cass {
+func NewAstraDB() *AstraDB {
 	log.Println("Connecting to AstraDB")
-	id, secret, zipPath := getAstraCreds()
+	id, secret, zipPath := getAstraDBCreds()
 	session, err := easycass.GetSession(id, secret, zipPath)
 	session.Closed()
 	if err != nil {
 		log.Fatal(err)
 	}
 	log.Println(easycass.GetKeyspace(session))
-	return &Cass{session: session}
+	return &AstraDB{session: session}
 }
 
-func (c *Cass) HealthCheck() error {
+func (c *AstraDB) HealthCheck() error {
 	var count int
 	err := c.session.Query("SELECT COUNT(*) FROM sitemaps").Scan(&count)
 	if err != nil {
@@ -51,7 +51,7 @@ func (c *Cass) HealthCheck() error {
 	return nil
 }
 
-func (c *Cass) WriteCrawl(crawlID, sitemapID uuid.UUID, url string, depth, maxDepth int, status string) error {
+func (c *AstraDB) WriteCrawl(crawlID, sitemapID uuid.UUID, url string, depth, maxDepth int, status string) error {
 	cUUID, err := gocql.ParseUUID(crawlID.String())
 	if err != nil {
 		return err
@@ -84,7 +84,7 @@ func (c *Cass) WriteCrawl(crawlID, sitemapID uuid.UUID, url string, depth, maxDe
 	return nil
 }
 
-func (c *Cass) UpdateStatus(crawlID, sitemapID uuid.UUID, status string) error {
+func (c *AstraDB) UpdateStatus(crawlID, sitemapID uuid.UUID, status string) error {
 	cUUID, err := gocql.ParseUUID(crawlID.String())
 	if err != nil {
 		return err
@@ -100,7 +100,7 @@ func (c *Cass) UpdateStatus(crawlID, sitemapID uuid.UUID, status string) error {
 	return nil
 }
 
-func (c *Cass) WriteSitemap(sitemapID string, url string, maxDepth int) error {
+func (c *AstraDB) WriteSitemap(sitemapID string, url string, maxDepth int) error {
 	smUUID, err := gocql.ParseUUID(sitemapID)
 	if err != nil {
 		return err
@@ -129,7 +129,7 @@ type crawlJob struct {
 	MaxDepth  int
 }
 
-func (c *Cass) GetSitemapIDForCrawlID(crawlID uuid.UUID) (*crawlJob, error) {
+func (c *AstraDB) GetSitemapIDForCrawlID(crawlID uuid.UUID) (*crawlJob, error) {
 	cUUID, err := gocql.ParseUUID(crawlID.String())
 	if err != nil {
 		return nil, err
@@ -149,7 +149,7 @@ func (c *Cass) GetSitemapIDForCrawlID(crawlID uuid.UUID) (*crawlJob, error) {
 	return cj, nil
 }
 
-func (c *Cass) GetMaxDepthForSitemapID(sitemapID uuid.UUID) (int, error) {
+func (c *AstraDB) GetMaxDepthForSitemapID(sitemapID uuid.UUID) (int, error) {
 	smUUID, err := gocql.ParseUUID(sitemapID.String())
 	if err != nil {
 		return -1, err
@@ -164,7 +164,7 @@ func (c *Cass) GetMaxDepthForSitemapID(sitemapID uuid.UUID) (int, error) {
 	return maxDepth, nil
 }
 
-func (c *Cass) URLExistsForSitemapID(sitemapID uuid.UUID, URL string) (bool, error) {
+func (c *AstraDB) URLExistsForSitemapID(sitemapID uuid.UUID, URL string) (bool, error) {
 	smUUID, err := gocql.ParseUUID(sitemapID.String())
 	if err != nil {
 		return false, err
@@ -183,7 +183,7 @@ func (c *Cass) URLExistsForSitemapID(sitemapID uuid.UUID, URL string) (bool, err
 	return true, nil
 }
 
-func (c *Cass) WriteResults(sitemapID, crawlID uuid.UUID, URL string, links []string) error {
+func (c *AstraDB) WriteResults(sitemapID, crawlID uuid.UUID, URL string, links []string) error {
 	smUUID, err := gocql.ParseUUID(sitemapID.String())
 	if err != nil {
 		return err
@@ -208,7 +208,7 @@ type Details struct {
 	MaxDepth  int
 }
 
-func (c *Cass) GetSitemapDetails(sitemapID uuid.UUID) (*Details, error) {
+func (c *AstraDB) GetSitemapDetails(sitemapID uuid.UUID) (*Details, error) {
 	smUUID, err := gocql.ParseUUID(sitemapID.String())
 	if err != nil {
 		return nil, err
@@ -225,7 +225,7 @@ func (c *Cass) GetSitemapDetails(sitemapID uuid.UUID) (*Details, error) {
 	return &smDetails, nil
 }
 
-func (c *Cass) GetSitemapResults(sitemapID uuid.UUID) (*[]Result, error) {
+func (c *AstraDB) GetSitemapResults(sitemapID uuid.UUID) (*[]Result, error) {
 	smUUID, err := gocql.ParseUUID(sitemapID.String())
 	if err != nil {
 		return nil, err

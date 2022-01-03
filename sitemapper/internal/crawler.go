@@ -132,16 +132,14 @@ func (c *ConcurrentLimitedCrawlEngine) crawl(u, root, parent string, depth int) 
 		c.WG.Add(1)
 		go func(urlLink, root, parent string, d int) {
 			defer c.WG.Done()
-			retries := 0
 			for {
 				err := c.limiter.RunFunc(func() {
 					c.crawl(urlLink, root, parent, d)
 				})
 				if err != nil {
-					n := rand.Intn(500) // n will be between 0 and 10
+					n := rand.Intn(500)
 					log.Printf("task limited for URL %s, sleeping for %depth millisecconds\n", urlLink, n)
 					time.Sleep(time.Duration(n) * time.Millisecond)
-					retries++
 				} else {
 					break
 				}
@@ -223,7 +221,11 @@ func cleanLinks(links []string, root string, parentUrl *url.URL) []string {
 			parentPath := parentUrl.Path[:li+1]
 			newPath := path.Join(parentPath, l.Path)
 			urlLink = &url.URL{Host: parentUrl.Host, Path: newPath, Scheme: parentUrl.Scheme}
-		} else if strings.Contains(l.Host, rootUrl.Host) {
+		} else if i := strings.Index(l.Host, rootUrl.Host); i >= 0 {
+			if i != 0 && string(l.Host[i-1]) != "." && string(l.Host[i-1]) != "/" {
+				continue
+			}
+
 			urlLink = &url.URL{Host: l.Host, Path: l.Path, Scheme: l.Scheme}
 		}
 
@@ -237,7 +239,8 @@ func cleanLinks(links []string, root string, parentUrl *url.URL) []string {
 
 // getHTML visits the provided URL and returns any HTML in the response as a string.
 func getHTML(u string) (string, *url.URL, error) {
-	resp, err := http.Get(u)
+	client := http.Client{Timeout: 5 * time.Second}
+	resp, err := client.Get(u)
 	if err != nil {
 		return "", nil, err
 	}
