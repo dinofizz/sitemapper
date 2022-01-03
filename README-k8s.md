@@ -5,7 +5,7 @@ This sitemapper project provides two implementations:
 * A standalone sitemapper CLI tool, run from a single executable binary TODO: link
 * An job queue implementation which running on Kubernetes, using NATS pub/sub messaging and a managed Cassandra database (AstraDB)
 
-This README details the Kubernetes implementation. For more information see my blog post [here](TOOO).
+This README details the Kubernetes implementation. For more information see my blog post [here](./README.md).
 
 ## Overview
 
