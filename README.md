@@ -1,10 +1,12 @@
-# sitemapper
+# SiteMapper
 
 ![Build & Test](https://github.com/dinofizz/sitemapper/actions/workflows/ci.yml/badge.svg) [![codecov](https://codecov.io/gh/dinofizz/sitemapper/branch/main/graph/badge.svg?token=YOPGOKOEJB)](https://codecov.io/gh/dinofizz/sitemapper)
 
 sitemapper is a site mapping tool which provides a JSON output detailing each page visited, each with a list of links that are related to the root URL. The depth to which sitemapper will explore a site is configurable, as well as the mode of operation: "synchronous", "concurrent" and "concurrent limited".
 
 This README details the "standalone" CLI tool implementation. This repo also contains code related to running sitemapper as a Kubernetes-based distributed crawler. See [README-k8s.md](./README-k8s.md),
+
+See [my blog post](https://www.dinofizzotti.com/blog/2022-01-04-sitemapper-part-1-exploring-concurrency-in-go/) which provides additional detail on SiteMapper.
 
 Example:
 

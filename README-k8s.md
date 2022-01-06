@@ -1,11 +1,11 @@
-# sitemapper (Kubernetes)
+# SiteMapper (Kubernetes)
 
-This sitemapper project provides two implementations:
+This SiteMapper project provides two implementations:
 
-* A standalone sitemapper CLI tool, run from a single executable binary TODO: link
+* A standalone SiteMapper CLI tool, run from a single executable binary ([link](./README.md))
 * An job queue implementation which running on Kubernetes, using NATS pub/sub messaging and a managed Cassandra database (AstraDB)
 
-This README details the Kubernetes implementation. For more information see my blog post [here](./README.md).
+This README details the Kubernetes implementation. For more information see my blog post [here](https://www.dinofizzotti.com/blog/2022-01-04-sitemapper-part-2-distributed-crawling-using-kubernetes-nats-and-cassandra/).
 
 ## Overview
 
@@ -13,24 +13,29 @@ _Note: The point of doing this was not to provide an optimal solution, but to ex
 
 _Another Note: This is not a tutorial and I'm not "maintaining" this project. This repo is for me to store what I've been working on._
 
-While the standalone CLI implementation uses Go concurrency primitives to run multiple concurrent crawl tasks for a given root URL, the Kubernetes implementation uses a long-lived "crawl manager" pod to create ephemeral Kubernetes Job pods to crawl a single URL. A Kubernetes job runs a pod until completion.
+While the stand-alone CLI implementation uses Go concurrency primitives to run multiple concurrent crawl tasks for a given root URL, the Kubernetes implementation uses a long-lived "crawl manager" pod to create ephemeral [Kubernetes Job](https://kubernetes.io/docs/concepts/workloads/controllers/job/) pods to crawl a single URL. A Kubernetes job runs a pod until completion.
 
-![Diagram depicting Kubernetes sitemapper activities](./sitemapper.png)
+![Diagram depicting Kubernetes SiteMapper activities](sitemapper.png)
 
-The crawl manager subscribes to three individual NATS subjects at startup. Different activities are triggered by the messages received on each of the subjects:
+The crawl manager subscribes to three individual NATS subjects at start-up. Different activities are triggered by the messages received on each of the subjects:
 
 * a "start" message begins the crawl activity for a root URL
 * a "crawl" message instructs the crawl manager to create a Job pod for a specific URL
 * a "results" message saves the results of a crawl and creates new crawl messages for each result
 
-State for each sitemap, such as the root URL and the maximum crawl depth is saved to a managed Cassandra database using AstraDB TODO link.
+State for each sitemap, such as the root URL and the maximum crawl depth is saved to a managed Cassandra database using AstraDB.
 
-The job pods call into the same sitemapper Go code as per the standalone implementation, but only crawl a single URL (depth = 1). In place of writing the results to stdout, a message containing the URL and URL links results are published to the NATS results subject.
+The job pods call into the same SiteMapper Go code as per the stand-alone implementation, but only crawl a single URL (depth = 1). In place of writing the results to stdout, a message containing the URL and URL links results are published to the NATS results subject.
 
-An "api" deployment exists which exposes a simple REST API for sitemap creation and result retrieval:
+See below flow charts detailing how each type of message is handled by the crawl manager.
 
-* POST /sitemap
-* GET /sitemap/<sitemap-id>
+An "api" deployment exists which exposes a simple REST API for sitemap creation and result retrieval.
+
+* POST /sitemap with JSON body
+  * This creates a "start" NATS message
+* GET /sitemap/\<sitemap-id\>
+
+Sample requests and responses can be found below.
 
 ## Notes on Kubernetes Deployment
 
@@ -99,7 +104,7 @@ $ curl -s -X POST http://$NODE_IP:$NODE_PORT/sitemap -d '{"URL":"https://www.goo
 Once the crawl jobs have all completed you can retrieve the results using the sitemap ID returned in the response above:
 
 ```bash
-$ curl -s http://$NODE_IP:$NODE_PORT/sitemap/918e9d19-6c91-11ec-8f5b-9269ffb7ee39
+$ curl -s http://$NODE_IP:$NODE_PORT/sitemap/918e9d19-6c91-11ec-8f5b-9269ffb7ee39 | jq
 {
   "SitemapID": "918e9d19-6c91-11ec-8f5b-9269ffb7ee39",
   "MaxDepth": 2,

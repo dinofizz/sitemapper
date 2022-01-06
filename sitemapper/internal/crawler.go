@@ -80,6 +80,7 @@ func (c *ConcurrentCrawlEngine) Run() {
 
 // Run begins the sitemap crawl activity for the ConcurrentLimitedCrawlEngine.
 func (c *ConcurrentLimitedCrawlEngine) Run() {
+	rand.Seed(time.Now().Unix())
 	c.crawl(c.startURL, c.startURL, c.startURL, 0)
 	c.WG.Wait()
 }
