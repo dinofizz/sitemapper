@@ -2,9 +2,9 @@
 
 ![Build & Test](https://github.com/dinofizz/sitemapper/actions/workflows/ci.yml/badge.svg) [![codecov](https://codecov.io/gh/dinofizz/sitemapper/branch/main/graph/badge.svg?token=YOPGOKOEJB)](https://codecov.io/gh/dinofizz/sitemapper)
 
-sitemapper is a site mapping tool which provides a JSON output detailing each page visited, each with a list of links that are related to the root URL. The depth to which sitemapper will explore a site is configurable, as well as the mode of operation: "synchronous", "concurrent" and "concurrent limited".
+SiteMapper is a site mapping tool which provides a JSON output detailing each page visited, each with a list of links that are related to the root URL. The depth to which SiteMapper will explore a site is configurable, as well as the mode of operation: "synchronous", "concurrent" and "concurrent limited".
 
-This README details the "standalone" CLI tool implementation. This repo also contains code related to running sitemapper as a Kubernetes-based distributed crawler. See [README-k8s.md](./README-k8s.md),
+This README details the "standalone" CLI tool implementation. This repo also contains code related to running SiteMapper as a Kubernetes-based distributed crawler. See [README-k8s.md](./README-k8s.md),
 
 See [my blog post](https://www.dinofizzotti.com/blog/2022-01-04-sitemapper-part-1-exploring-concurrency-in-go/) which provides additional detail on SiteMapper.
 
@@ -36,7 +36,7 @@ Example:
   }
 ]
 ```
-*Note: the above example pipes the output of sitemapper into an additional JSON formatting tool, "[jq](https://stedolan.github.io/jq/)".*
+*Note: the above example pipes the output of SiteMapper into an additional JSON formatting tool, "[jq](https://stedolan.github.io/jq/)".*
 
 **This tool is _not_ intended to be used for any serious sitemapping activities.** It is a means for me to continue learning how to write idiomatic Go. Mapping a site provides a problem which lends allows me to practise writing Go code, playing with Go's concurrency features, as well as learn about project structure, writing tests, and interacting with 3rd party libraries (Cobra). Further elaboration below.
 
@@ -55,7 +55,7 @@ I make use of channels and sync.WaitGroup to run multiple goroutines, as well as
 
 ### Interfaces
 
-[crawler.go](sitemapper/internal/crawler.go) provides three different implementations of a `Run` method, defined in the `CrawlEngine` interface, for the three different concurrency modes featured by sitemapper. Commandline options parsed by [root.go](sitemapper/cmd/root.go) determine which implementation is used at runtime.
+[crawler.go](sitemapper/internal/crawler.go) provides three different implementations of a `Run` method, defined in the `CrawlEngine` interface, for the three different concurrency modes featured by SiteMapper. Commandline options parsed by [root.go](sitemapper/cmd/root.go) determine which implementation is used at runtime.
 
 ### Standard Library Interfaces
 
@@ -66,7 +66,7 @@ I make use of channels and sync.WaitGroup to run multiple goroutines, as well as
 
 ### JSON
 
-The output of sitemapper is JSON written to stdout. [sitemap.go](sitemapper/internal/sitemap.go) includes a custom `JSONMarshal` function which provides a cleaner mapping of the internal sitemap structure to a more readable dictionary of string arrays.
+The output of SiteMapper is JSON written to stdout. [sitemap.go](sitemapper/internal/sitemap.go) includes a custom `JSONMarshal` function which provides a cleaner mapping of the internal sitemap structure to a more readable dictionary of string arrays.
 
 ### Third Party Packages
 
