@@ -45,20 +45,21 @@ var rootCmd = &cobra.Command{
 		elapsed := end.Sub(start)
 		log.Println("Elapsed milliseconds: ", elapsed.Milliseconds())
 		var b bytes.Buffer
-		_, err := sm.WriteTo(&b)
+		enc := json.NewEncoder(&b)
+		err := enc.Encode(sm)
+		//_, err := sm.WriteTo(&b)
 		if err != nil {
 			return err
 		}
 
-		var results []sitemap.Result
-		err = json.Unmarshal(b.Bytes(), &results)
+		var rc sitemap.ResultContainer
+		err = json.Unmarshal(b.Bytes(), &rc)
 		if err != nil {
 			return err
 		}
-		log.Println(len(results))
 
 		crawlID := uuid.MustParse(id)
-		err = ns.SendResultsMessage(crawlID, &results)
+		err = ns.SendResultsMessage(crawlID, &rc.Results)
 		if err != nil {
 			return err
 		}

@@ -24,6 +24,11 @@ type StartMessage struct {
 	MaxDepth  int
 }
 
+type ResultContainer struct {
+	Count   int
+	Results []Result
+}
+
 type Result struct {
 	URL   string
 	Links []string

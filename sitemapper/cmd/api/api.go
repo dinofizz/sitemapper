@@ -93,11 +93,13 @@ func (a *API) getSitemapResults(w http.ResponseWriter, r *http.Request) {
 	}
 
 	response := struct {
+		Count     int
 		SitemapID string
 		MaxDepth  int
 		URL       string
 		Results   *[]sitemap.Result
 	}{
+		Count:     len(*results),
 		SitemapID: smDetails.SitemapID,
 		URL:       smDetails.URL,
 		MaxDepth:  smDetails.MaxDepth,

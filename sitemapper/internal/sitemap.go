@@ -2,7 +2,6 @@ package sitemap
 
 import (
 	"encoding/json"
-	"io"
 	"sort"
 	"strings"
 	"sync"
@@ -12,18 +11,13 @@ import (
 // The use of a map ensures that we don't write duplicate entries, and negates the need for searching a slice.
 // TODO: rethink this structure, not sure if I need the values AND the keys.
 type links map[string]string
-type linkmap map[string]links
+type linkMap map[string]links
 
 // A SiteMap is the data structure used to store a list of links found at crawled URLs. A sync.RWMutex provides
 // access control to the internal map.
 type SiteMap struct {
 	mutex   sync.RWMutex
-	sitemap linkmap
-}
-
-type URLLinks struct {
-	URL   string
-	Links links
+	sitemap linkMap
 }
 
 // NewSiteMap returns an SiteMap instance with an empty sitemap map, ready for URLs and links to be added.
@@ -76,16 +70,22 @@ func (sm *SiteMap) UpdateURLWithLinks(u string, newLinks []string) {
 }
 
 // MarshalJSON is provided to aid the marshalling of the internal map structure for a parent URL to a slice of link strings.
-func (lm *linkmap) MarshalJSON() ([]byte, error) {
-	var uls []URLLinks
-	for k, v := range *lm {
-		ul := &URLLinks{URL: k, Links: v}
-		uls = append(uls, *ul)
+func (lm *linkMap) MarshalJSON() ([]byte, error) {
+	type urlLinks struct {
+		URL   string
+		Links links
 	}
 
-	j, err := json.Marshal(uls)
+	urls := make([]urlLinks, 0)
+
+	for k, v := range *lm {
+		ul := &urlLinks{URL: k, Links: v}
+		urls = append(urls, *ul)
+	}
+
+	j, err := json.Marshal(urls)
 	if err != nil {
-		return j, err
+		return nil, err
 	}
 
 	return j, nil
@@ -107,30 +107,20 @@ func (lm links) MarshalJSON() ([]byte, error) {
 	return j, nil
 }
 
-// CounterWr wraps an io.Writer with a Count variable to allow for our implementation of WriteTo which needs
-// to return the number of bytes written.
-type CounterWr struct {
-	io.Writer
-	Count int64
-}
+func (sm *SiteMap) MarshalJSON() ([]byte, error) {
 
-// Write implements the io.Writer interface and exists to support our implementation of WriteTo which needs
-// to return the number of bytes written.
-func (cw *CounterWr) Write(p []byte) (n int, err error) {
-	n, err = cw.Writer.Write(p)
-	cw.Count += int64(n)
-	return n, err
-}
-
-// WriteTo implements the io.WriteTo interface and is made available such that the internal map structure can be
-// written out to the io.Writer provided.
-func (sm *SiteMap) WriteTo(w io.Writer) (n int64, err error) {
-	cw := &CounterWr{Count: 0, Writer: w}
-
-	enc := json.NewEncoder(cw)
-	if err = enc.Encode(&sm.sitemap); err != nil {
-		return cw.Count, err
+	jsm := struct {
+		Count   int
+		Results *linkMap
+	}{
+		Count:   len(sm.sitemap),
+		Results: &sm.sitemap,
 	}
 
-	return cw.Count, err
+	j, err := json.Marshal(jsm)
+	if err != nil {
+		return nil, err
+	}
+
+	return j, nil
 }

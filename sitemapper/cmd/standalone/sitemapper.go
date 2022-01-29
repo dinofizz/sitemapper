@@ -1,6 +1,7 @@
 package main
 
 import (
+	"encoding/json"
 	"errors"
 	"fmt"
 	"github.com/dinofizz/sitemapper/sitemapper/internal"
@@ -57,7 +58,9 @@ var rootCmd = &cobra.Command{
 		end := time.Now()
 		elapsed := end.Sub(start)
 		log.Println("Elapsed milliseconds: ", elapsed.Milliseconds())
-		_, err := sm.WriteTo(os.Stdout)
+
+		enc := json.NewEncoder(os.Stdout)
+		err := enc.Encode(sm)
 		return err
 	},
 }
