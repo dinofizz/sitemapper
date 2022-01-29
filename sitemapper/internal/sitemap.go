@@ -9,7 +9,7 @@ import (
 // links is a type definition which is used internally as a list of links found at a parent URL.
 // The use of a map ensures that we don't write duplicate entries, and negates the need for searching a slice.
 // TODO: rethink this structure, not sure if I need the values AND the keys.
-type links map[string]string
+type links map[string]struct{}
 type linkMap map[string]links
 
 // A SiteMap is the data structure used to store a list of links found at crawled URLs. A sync.RWMutex provides
@@ -37,8 +37,8 @@ func (sm *SiteMap) GetLinks(u string) ([]string, bool) {
 
 	var urls []string
 
-	for _, v := range urlMap {
-		urls = append(urls, v)
+	for k := range urlMap {
+		urls = append(urls, k)
 	}
 
 	return urls, exists
@@ -58,7 +58,7 @@ func (sm *SiteMap) UpdateURLWithLinks(u string, newLinks []string) {
 	linkMap := sm.sitemap[u]
 
 	for _, nl := range newLinks {
-		linkMap[nl] = nl
+		linkMap[nl] = struct{}{}
 	}
 
 	sm.sitemap[u] = linkMap
@@ -89,8 +89,8 @@ func (lm *linkMap) MarshalJSON() ([]byte, error) {
 // MarshalJSON is provided to aid the marshalling of the internal map structure for a parent URL to a slice of link strings.
 func (lm links) MarshalJSON() ([]byte, error) {
 	l := make([]string, 0)
-	for _, v := range lm {
-		l = append(l, v)
+	for k := range lm {
+		l = append(l, k)
 	}
 
 	sort.Strings(l)

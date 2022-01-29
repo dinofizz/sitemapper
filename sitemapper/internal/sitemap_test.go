@@ -27,8 +27,8 @@ func TestSiteMap_UpdateUrlWithLinks(t *testing.T) {
 	sm.UpdateURLWithLinks(u, l)
 
 	expectedMap := links{
-		"https://link.one/": "https://link.one/",
-		"https://link.two":  "https://link.two",
+		"https://link.one/": struct{}{},
+		"https://link.two":  struct{}{},
 	}
 
 	is.Equal(sm.sitemap["https://www.example.com"], expectedMap)
