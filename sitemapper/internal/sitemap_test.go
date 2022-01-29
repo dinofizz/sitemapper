@@ -34,40 +34,43 @@ func TestSiteMap_UpdateUrlWithLinks(t *testing.T) {
 	is.Equal(sm.sitemap["https://www.example.com"], expectedMap)
 }
 
-func TestSiteMap_WriteTo(t *testing.T) {
+func TestSiteMap_EncodeOutput(t *testing.T) {
 	sm := NewSiteMap()
 	u := "https://www.example.com"
 
-	type expectedStructure []struct {
+	type result struct {
 		URL   string
 		Links []string
 	}
 
-	expected := expectedStructure{
-		{
-			URL: "https://www.example.com",
-			Links: []string{
-				"https://link.one/",
-				"https://link.two",
+	type resultContainer struct {
+		Count   int
+		Results []result
+	}
+
+	var expected = resultContainer{
+		Count: 1,
+		Results: []result{
+			{
+				URL: "https://www.example.com",
+				Links: []string{
+					"https://link.one/",
+					"https://link.two",
+				},
 			},
 		},
 	}
 
 	is := is2.New(t)
-	var output expectedStructure
+	var actual resultContainer
 
 	sm.AddURL(u)
-	sm.UpdateURLWithLinks(u, expected[0].Links)
+	sm.UpdateURLWithLinks(u, expected.Results[0].Links)
 	var b bytes.Buffer
-	_, err := sm.WriteTo(&b)
-	if err != nil {
-		t.Fatal(err)
-	}
-
-	err = json.Unmarshal(b.Bytes(), &output)
-	if err != nil {
-		t.Fatal(err)
-	}
-
-	is.Equal(output, expected)
+	enc := json.NewEncoder(&b)
+	err := enc.Encode(sm)
+	is.NoErr(err)
+	err = json.Unmarshal(b.Bytes(), &actual)
+	is.NoErr(err)
+	is.Equal(actual, expected)
 }
