@@ -4,13 +4,13 @@ package sitemap
 import (
 	"errors"
 	"fmt"
+	"golang.org/x/net/html"
 	"io/ioutil"
 	"log"
 	"math/rand"
 	"net/http"
 	"net/url"
 	"path"
-	"regexp"
 	"strings"
 	"sync"
 	"time"
@@ -160,15 +160,19 @@ func getLinks(url, root, parent string, depth int, sm *SiteMap) []string {
 	sm.AddURL(url)
 	log.Printf("visiting URL %s at depth %d with parent %s", url, depth, parent)
 
-	html, requestUrl, err := getHTML(url)
+	content, requestUrl, err := getHTML(url)
 	if err != nil {
-		log.Printf("error retrieving HTML for URL %s: %s", url, err)
+		log.Printf("error retrieving content for URL %s: %v", url, err)
 		return nil
 	}
-	if html == "" {
+	if content == "" {
 		return nil
 	}
-	links := extractLinks(html)
+	links, err := extractLinks(content)
+	if err != nil {
+		log.Printf("error extracting links from HTML content for URL %s: %v", url, err)
+		return nil
+	}
 	if links == nil {
 		return nil
 	}
@@ -258,25 +262,35 @@ func getHTML(u string) (string, *url.URL, error) {
 }
 
 // extractLinks applies a regular expression pattern to an HTML string and returns a slice of string links
-func extractLinks(html string) []string {
-	re := regexp.MustCompile(`<a\s+(?:[^>]*?\s+)?href=(\S+?)[\s>]`)
-	matches := re.FindAllStringSubmatch(html, -1)
-	if len(matches) == 0 {
-		return nil
+// Implementation uses the example from the docs: https://pkg.go.dev/golang.org/x/net/html#example-Parse
+func extractLinks(content string) ([]string, error) {
+	doc, err := html.Parse(strings.NewReader(content))
+	if err != nil {
+		return nil, err
 	}
 
 	lm := make(map[string]struct{})
-	links := make([]string, 0)
-
-	for _, v := range matches {
-		m := v[1]
-		m = strings.Trim(m, "\"'")
-		m = strings.TrimSpace(m)
-		if _, ok := lm[m]; !ok {
-			lm[m] = struct{}{}
-			links = append(links, m)
+	var links []string
+	var f func(*html.Node)
+	f = func(n *html.Node) {
+		if n.Type == html.ElementNode && n.Data == "a" {
+			for _, a := range n.Attr {
+				if a.Key == "href" {
+					v := a.Val
+					v = strings.TrimSpace(v)
+					if _, ok := lm[v]; !ok {
+						lm[v] = struct{}{}
+						links = append(links, v)
+					}
+					break
+				}
+			}
+		}
+		for c := n.FirstChild; c != nil; c = c.NextSibling {
+			f(c)
 		}
 	}
+	f(doc)
 
-	return links
+	return links, nil
 }

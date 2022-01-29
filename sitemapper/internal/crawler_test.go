@@ -124,8 +124,8 @@ func Test_extractLinks(t *testing.T) {
 				t.Fatal(err)
 			}
 			html := string(file)
-			links := extractLinks(html)
-
+			links, err := extractLinks(html)
+			is.NoErr(err)
 			is.Equal(len(links), len(d.links))
 			is.Equal(links, d.links)
 		})
