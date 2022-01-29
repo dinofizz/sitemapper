@@ -3,7 +3,6 @@ package sitemap
 import (
 	"encoding/json"
 	"sort"
-	"strings"
 	"sync"
 )
 
@@ -29,10 +28,9 @@ func NewSiteMap() *SiteMap {
 // are returned to the caller along with a boolean with a value of true.
 // If the key is not found in the map a nil slice is returned along with a boolean value of false.
 func (sm *SiteMap) GetLinks(u string) ([]string, bool) {
-	s := strings.TrimSuffix(u, "/")
 	sm.mutex.RLock()
 	defer sm.mutex.RUnlock()
-	urlMap, exists := sm.sitemap[s]
+	urlMap, exists := sm.sitemap[u]
 	if !exists {
 		return nil, false
 	}
@@ -48,25 +46,22 @@ func (sm *SiteMap) GetLinks(u string) ([]string, bool) {
 
 // AddURL adds an entry to the internal map for a given URL and initialises the list of links with an empty map.
 func (sm *SiteMap) AddURL(u string) {
-	s := strings.TrimSuffix(u, "/")
 	sm.mutex.Lock()
 	defer sm.mutex.Unlock()
-	sm.sitemap[s] = links{}
+	sm.sitemap[u] = links{}
 }
 
 // UpdateURLWithLinks associates the provided slice of links with the given parent URL.
 func (sm *SiteMap) UpdateURLWithLinks(u string, newLinks []string) {
-	s := strings.TrimSuffix(u, "/")
 	sm.mutex.Lock()
 	defer sm.mutex.Unlock()
-	linkMap := sm.sitemap[s]
+	linkMap := sm.sitemap[u]
 
 	for _, nl := range newLinks {
-		l := strings.TrimSuffix(nl, "/")
-		linkMap[l] = nl
+		linkMap[nl] = nl
 	}
 
-	sm.sitemap[s] = linkMap
+	sm.sitemap[u] = linkMap
 }
 
 // MarshalJSON is provided to aid the marshalling of the internal map structure for a parent URL to a slice of link strings.
