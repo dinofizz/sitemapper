@@ -16,6 +16,8 @@ import (
 	"time"
 )
 
+const MAX_BACKOFF_MS int = 500
+
 // CrawlEngine is the interface implemented by the various crawl engines.
 type CrawlEngine interface {
 	Run()
@@ -91,7 +93,10 @@ func (c *SynchronousCrawlEngine) crawl(u, root, parent string, depth int) {
 	if c.maxDepth == depth {
 		return
 	}
-	urls := getLinks(u, root, parent, depth, c.sm)
+	urls, exists := getLinks(u, root, parent, depth, c.sm)
+	if exists {
+		return
+	}
 	depth++
 
 	for _, urlLink := range urls {
@@ -106,15 +111,19 @@ func (c *ConcurrentCrawlEngine) crawl(u, root, parent string, depth int) {
 	if c.maxDepth == depth {
 		return
 	}
-	urls := getLinks(u, root, parent, depth, c.sm)
+	urls, exists := getLinks(u, root, parent, depth, c.sm)
+	if exists {
+		return
+	}
 	depth++
 
 	for _, urlLink := range urls {
 		c.WG.Add(1)
-		go func(urlLink, root, parent string, d int) {
+		ul := urlLink
+		go func() {
 			defer c.WG.Done()
-			c.crawl(urlLink, root, parent, d)
-		}(urlLink, root, u, depth)
+			c.crawl(ul, root, parent, depth)
+		}()
 	}
 }
 
@@ -126,35 +135,39 @@ func (c *ConcurrentLimitedCrawlEngine) crawl(u, root, parent string, depth int) 
 	if c.maxDepth == depth {
 		return
 	}
-	urls := getLinks(u, root, parent, depth, c.sm)
+	urls, exists := getLinks(u, root, parent, depth, c.sm)
+	if exists {
+		return
+	}
 	depth++
 
 	for _, urlLink := range urls {
 		c.WG.Add(1)
-		go func(urlLink, root, parent string, d int) {
+		ul := urlLink
+		go func() {
 			defer c.WG.Done()
 			for {
 				err := c.limiter.RunFunc(func() {
-					c.crawl(urlLink, root, parent, d)
+					c.crawl(ul, root, parent, depth)
 				})
 				if err != nil {
-					n := rand.Intn(500)
-					log.Printf("task limited for URL %s, sleeping for %depth millisecconds\n", urlLink, n)
+					n := rand.Intn(MAX_BACKOFF_MS)
+					log.Printf("task limited for URL %s, sleeping for %d millisecconds\n", ul, n)
 					time.Sleep(time.Duration(n) * time.Millisecond)
 				} else {
 					break
 				}
 			}
-		}(urlLink, root, u, depth)
+		}()
 	}
 }
 
 // getLinks performs a series of tasks, calling into other functions responsible for fetching the HTML,
 // extracting any links, and then cleaning the extracted links.
 // getLinks returns a slice of strings of relevant and applicable links as related to the parent and root URLs.
-func getLinks(url, root, parent string, depth int, sm *SiteMap) []string {
+func getLinks(url, root, parent string, depth int, sm *SiteMap) ([]string, bool) {
 	if urls, exists := sm.GetLinks(url); exists {
-		return urls
+		return urls, true
 	}
 
 	sm.AddURL(url)
@@ -163,18 +176,18 @@ func getLinks(url, root, parent string, depth int, sm *SiteMap) []string {
 	content, requestUrl, err := getHTML(url)
 	if err != nil {
 		log.Printf("error retrieving content for URL %s: %v", url, err)
-		return nil
+		return nil, false
 	}
 	if content == "" {
-		return nil
+		return nil, false
 	}
 	links, err := extractLinks(content)
 	if err != nil {
 		log.Printf("error extracting links from HTML content for URL %s: %v", url, err)
-		return nil
+		return nil, false
 	}
 	if links == nil {
-		return nil
+		return nil, false
 	}
 
 	urls := cleanLinks(links, root, requestUrl)
@@ -182,7 +195,7 @@ func getLinks(url, root, parent string, depth int, sm *SiteMap) []string {
 		sm.UpdateURLWithLinks(url, urls)
 	}
 
-	return urls
+	return urls, false
 }
 
 // cleanLinks accepts a list of links and applies a set of rules to determine whether the links should be included
@@ -216,21 +229,22 @@ func cleanLinks(links []string, root string, parentUrl *url.URL) []string {
 			continue
 		}
 
-		if l.Host == "" && strings.HasPrefix(l.Path, "/") {
+		switch {
+		// Relative URL to host
+		case l.Host == "" && strings.HasPrefix(l.Path, "/"):
 			urlLink = &url.URL{Host: parentUrl.Host, Path: l.Path, Scheme: rootUrl.Scheme}
-		} else if l.Host == "" && l.Path != "" && strings.HasSuffix(parentUrl.Path, "/") {
+		// Relative URL to current parent path, append to current document path
+		case l.Host == "" && l.Path != "" && strings.HasSuffix(parentUrl.Path, "/"):
 			newPath := path.Join(parentUrl.Path, l.Path)
 			urlLink = &url.URL{Host: parentUrl.Host, Path: newPath, Scheme: parentUrl.Scheme}
-		} else if l.Host == "" && l.Path != "" {
+		// Relative URL to current path, same depth as current document
+		case l.Host == "" && l.Path != "":
 			li := strings.LastIndex(parentUrl.Path, "/")
 			parentPath := parentUrl.Path[:li+1]
 			newPath := path.Join(parentPath, l.Path)
 			urlLink = &url.URL{Host: parentUrl.Host, Path: newPath, Scheme: parentUrl.Scheme}
-		} else if i := strings.Index(l.Host, rootUrl.Host); i >= 0 {
-			if i != 0 && string(l.Host[i-1]) != "." && string(l.Host[i-1]) != "/" {
-				continue
-			}
-
+		// Absolute link featuring same host as root
+		case l.Host == rootUrl.Host:
 			urlLink = &url.URL{Host: l.Host, Path: l.Path, Scheme: l.Scheme}
 		}
 
@@ -269,8 +283,11 @@ func extractLinks(content string) ([]string, error) {
 		return nil, err
 	}
 
+	// Using a map to build a set of unique links
+	// When we add a new link to the map we also append it to the slice which is returned
 	lm := make(map[string]struct{})
 	var links []string
+
 	var f func(*html.Node)
 	f = func(n *html.Node) {
 		if n.Type == html.ElementNode && n.Data == "a" {

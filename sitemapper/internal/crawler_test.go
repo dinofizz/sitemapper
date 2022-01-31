@@ -70,7 +70,7 @@ func TestCrawlEngine_Run(t *testing.T) {
 			// This is then unmarshalled into a map of slices, which we can then more easily compare
 			// with the expected output which is stored in JSON file.
 
-			out, err := json.Marshal(d.sitemap.sitemap)
+			out, err := json.Marshal(d.sitemap.lm)
 			if err != nil {
 				t.Fatal(err)
 			}
@@ -93,7 +93,7 @@ func TestCrawlEngine_Run(t *testing.T) {
 
 			is := is.New(t)
 
-			is.True(len(d.sitemap.sitemap) == len(expectedResults))
+			is.True(len(d.sitemap.lm) == len(expectedResults))
 			is.Equal(actualResults, expectedResults)
 		})
 	}
@@ -155,9 +155,7 @@ func Test_getHtml(t *testing.T) {
 			srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 				w.WriteHeader(d.statusCode)
 				_, err := w.Write([]byte(d.responseBody))
-				if err != nil {
-					log.Fatal(err.Error())
-				}
+				is.NoErr(err)
 			}))
 
 			sUrl = srv.URL
@@ -241,9 +239,7 @@ func Test_cleanLinks(t *testing.T) {
 	for _, d := range data {
 		t.Run(d.name, func(t *testing.T) {
 			p, err := url.Parse(d.parent)
-			if err != nil {
-				t.Fatalf(err.Error())
-			}
+			is.NoErr(err)
 			cLinks := cleanLinks(d.inputLinks, d.root, p)
 			is.Equal(len(cLinks), len(d.expectedLinks))
 			for i, l := range cLinks {
@@ -277,9 +273,7 @@ func Test_getLinks(t *testing.T) {
 			srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 				w.WriteHeader(d.statusCode)
 				_, err := w.Write([]byte(d.responseBody))
-				if err != nil {
-					log.Fatal(err.Error())
-				}
+				is.NoErr(err)
 			}))
 
 			sUrl = srv.URL
@@ -294,7 +288,7 @@ func Test_getLinks(t *testing.T) {
 				sm.UpdateURLWithLinks(srv.URL, d.expectedLinks)
 			}
 
-			links := getLinks(sUrl, root, parent, depth, sm)
+			links, _ := getLinks(sUrl, root, parent, depth, sm)
 
 			is.Equal(links, d.expectedLinks)
 		})

@@ -6,22 +6,23 @@ import (
 	"sync"
 )
 
-// links is a type definition which is used internally as a list of links found at a parent URL.
+// links is a type definition which is used internally as a list of links found at a URL.
 // The use of a map ensures that we don't write duplicate entries, and negates the need for searching a slice.
-// TODO: rethink this structure, not sure if I need the values AND the keys.
 type links map[string]struct{}
+
+// linkMap is the collection of all unique URLs and the links found at each URL
 type linkMap map[string]links
 
 // A SiteMap is the data structure used to store a list of links found at crawled URLs. A sync.RWMutex provides
 // access control to the internal map.
 type SiteMap struct {
-	mutex   sync.RWMutex
-	sitemap linkMap
+	mutex sync.RWMutex
+	lm    linkMap
 }
 
 // NewSiteMap returns an SiteMap instance with an empty sitemap map, ready for URLs and links to be added.
 func NewSiteMap() *SiteMap {
-	return &SiteMap{sitemap: map[string]links{}}
+	return &SiteMap{lm: linkMap{}}
 }
 
 // GetLinks returns the slice of links available for a given URL key. If the URL exists in the internal map the links
@@ -30,7 +31,7 @@ func NewSiteMap() *SiteMap {
 func (sm *SiteMap) GetLinks(u string) ([]string, bool) {
 	sm.mutex.RLock()
 	defer sm.mutex.RUnlock()
-	urlMap, exists := sm.sitemap[u]
+	urlMap, exists := sm.lm[u]
 	if !exists {
 		return nil, false
 	}
@@ -48,23 +49,23 @@ func (sm *SiteMap) GetLinks(u string) ([]string, bool) {
 func (sm *SiteMap) AddURL(u string) {
 	sm.mutex.Lock()
 	defer sm.mutex.Unlock()
-	sm.sitemap[u] = links{}
+	sm.lm[u] = links{}
 }
 
 // UpdateURLWithLinks associates the provided slice of links with the given parent URL.
 func (sm *SiteMap) UpdateURLWithLinks(u string, newLinks []string) {
 	sm.mutex.Lock()
 	defer sm.mutex.Unlock()
-	linkMap := sm.sitemap[u]
+	linkMap := sm.lm[u]
 
 	for _, nl := range newLinks {
 		linkMap[nl] = struct{}{}
 	}
 
-	sm.sitemap[u] = linkMap
+	sm.lm[u] = linkMap
 }
 
-// MarshalJSON is provided to aid the marshalling of the internal map structure for a parent URL to a slice of link strings.
+// MarshalJSON is provided to aid the marshalling of the internal linkMap structure to a more JSON friendly format
 func (lm *linkMap) MarshalJSON() ([]byte, error) {
 	type urlLinks struct {
 		URL   string
@@ -87,9 +88,9 @@ func (lm *linkMap) MarshalJSON() ([]byte, error) {
 }
 
 // MarshalJSON is provided to aid the marshalling of the internal map structure for a parent URL to a slice of link strings.
-func (lm links) MarshalJSON() ([]byte, error) {
+func (ls links) MarshalJSON() ([]byte, error) {
 	l := make([]string, 0)
-	for k := range lm {
+	for k := range ls {
 		l = append(l, k)
 	}
 
@@ -108,8 +109,8 @@ func (sm *SiteMap) MarshalJSON() ([]byte, error) {
 		Count   int
 		Results *linkMap
 	}{
-		Count:   len(sm.sitemap),
-		Results: &sm.sitemap,
+		Count:   len(sm.lm),
+		Results: &sm.lm,
 	}
 
 	j, err := json.Marshal(jsm)

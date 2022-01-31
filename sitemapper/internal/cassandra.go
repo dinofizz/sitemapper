@@ -7,7 +7,6 @@ import (
 	"github.com/pkg/errors"
 	"log"
 	"os"
-	"strings"
 )
 
 type AstraDB struct {
@@ -171,8 +170,7 @@ func (c *AstraDB) URLExistsForSitemapID(sitemapID uuid.UUID, URL string) (bool, 
 	}
 	var count int
 
-	u := strings.TrimSuffix(URL, "/")
-	err = c.session.Query("SELECT COUNT(*) FROM results_by_sitemap_id WHERE sitemap_id = ? AND url = ?", smUUID, u).Scan(&count)
+	err = c.session.Query("SELECT COUNT(*) FROM results_by_sitemap_id WHERE sitemap_id = ? AND url = ?", smUUID, URL).Scan(&count)
 	if err != nil {
 		return false, errors.Wrap(err, "Error checking if URL exists for sitemap ID")
 	}
@@ -194,9 +192,8 @@ func (c *AstraDB) WriteResults(sitemapID, crawlID uuid.UUID, URL string, links [
 		return err
 	}
 
-	u := strings.TrimSuffix(URL, "/")
 	if err = c.session.Query(`INSERT into results_by_sitemap_id ( sitemap_id, url, crawl_id, links) values (?, ?, ?, ?)`,
-		smUUID, u, cUUID, links).Exec(); err != nil {
+		smUUID, URL, cUUID, links).Exec(); err != nil {
 		return errors.Wrap(err, "Unable to write results to DB")
 	}
 	return nil

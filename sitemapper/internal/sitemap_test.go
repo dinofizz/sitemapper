@@ -13,7 +13,7 @@ func TestSiteMap_AddUrl(t *testing.T) {
 
 	is := is2.New(t)
 
-	is.Equal(sm.sitemap["https://www.example.com"], links{})
+	is.Equal(sm.lm["https://www.example.com"], links{})
 }
 
 func TestSiteMap_UpdateUrlWithLinks(t *testing.T) {
@@ -31,7 +31,7 @@ func TestSiteMap_UpdateUrlWithLinks(t *testing.T) {
 		"https://link.two":  struct{}{},
 	}
 
-	is.Equal(sm.sitemap["https://www.example.com"], expectedMap)
+	is.Equal(sm.lm["https://www.example.com"], expectedMap)
 }
 
 func TestSiteMap_EncodeOutput(t *testing.T) {
